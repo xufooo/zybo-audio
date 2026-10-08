@@ -1,0 +1,112 @@
+{
+  "frame": {
+    "budget": 1041,
+    "cost": 586
+  },
+  "limit": 24,
+  "per_effect": [
+    {
+      "coefs": 15,
+      "id": "viperbass",
+      "sections": 3,
+      "slots": 2
+    },
+    {
+      "coefs": 20,
+      "id": "viperbass_pbp",
+      "sections": 3,
+      "slots": 4
+    },
+    {
+      "coefs": 15,
+      "id": "dynamic_bass",
+      "sections": 3,
+      "slots": 4
+    },
+    {
+      "coefs": 10,
+      "id": "dyn_bass",
+      "sections": 2,
+      "slots": 2
+    },
+    {
+      "coefs": 5,
+      "id": "clarity",
+      "sections": 1,
+      "slots": 1
+    },
+    {
+      "coefs": 5,
+      "id": "clarity_natural",
+      "sections": 1,
+      "slots": 1
+    },
+    {
+      "coefs": 5,
+      "id": "clarity_ozone",
+      "sections": 1,
+      "slots": 1
+    },
+    {
+      "coefs": 70,
+      "id": "clarity_xhifi",
+      "sections": 12,
+      "slots": 8
+    },
+    {
+      "coefs": 27,
+      "id": "vse",
+      "sections": 3,
+      "slots": 4
+    },
+    {
+      "coefs": 32,
+      "id": "analogx",
+      "sections": 5,
+      "slots": 5
+    },
+    {
+      "coefs": 5,
+      "id": "tube",
+      "sections": 1,
+      "slots": 1
+    },
+    {
+      "coefs": 15,
+      "id": "speaker_correction",
+      "sections": 3,
+      "slots": 1
+    },
+    {
+      "coefs": 15,
+      "id": "colorfulmusic",
+      "sections": 2,
+      "slots": 2
+    },
+    {
+      "coefs": 15,
+      "id": "crossfeed",
+      "sections": 2,
+      "slots": 3
+    },
+    {
+      "coefs": 5,
+      "id": "surround",
+      "sections": 0,
+      "slots": 1
+    },
+    {
+      "coefs": 50,
+      "id": "eq",
+      "sections": 10,
+      "slots": 4
+    },
+    {
+      "coefs": 0,
+      "id": "loudness",
+      "sections": 0,
+      "slots": 0
+    }
+  ],
+  "used": 13
+}

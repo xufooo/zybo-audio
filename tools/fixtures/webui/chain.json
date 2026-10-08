@@ -1,0 +1,126 @@
+{
+  "analogx": null,
+  "bands": 48,
+  "chain": [
+    {
+      "enabled": true,
+      "freq": 20,
+      "gain_db": 3.5,
+      "q": 0.7,
+      "type": "peq"
+    },
+    {
+      "enabled": true,
+      "freq": 42,
+      "gain_db": 0.5,
+      "q": 0.5,
+      "type": "peq"
+    },
+    {
+      "enabled": true,
+      "freq": 88.3,
+      "gain_db": 3.5,
+      "q": 0.5,
+      "type": "peq"
+    },
+    {
+      "enabled": true,
+      "freq": 185.7,
+      "gain_db": 2.5,
+      "q": 0.5,
+      "type": "peq"
+    },
+    {
+      "enabled": true,
+      "freq": 390.2,
+      "gain_db": -1,
+      "q": 0.5,
+      "type": "peq"
+    },
+    {
+      "enabled": true,
+      "freq": 820.1,
+      "gain_db": -1,
+      "q": 1.4,
+      "type": "peq"
+    },
+    {
+      "enabled": true,
+      "freq": 1723.5,
+      "gain_db": 1,
+      "q": 0.5,
+      "type": "peq"
+    },
+    {
+      "enabled": true,
+      "freq": 3622.3,
+      "gain_db": 3,
+      "q": 0.5,
+      "type": "peq"
+    },
+    {
+      "enabled": true,
+      "freq": 7613,
+      "gain_db": 5,
+      "q": 0.7,
+      "type": "peq"
+    },
+    {
+      "enabled": true,
+      "freq": 16000,
+      "gain_db": 2.5,
+      "q": 0.7,
+      "type": "peq"
+    }
+  ],
+  "clarity": null,
+  "colorfulmusic": null,
+  "crossfeed": null,
+  "dsp_available": true,
+  "dyn_bass": {
+    "att_ms": 5,
+    "available": true,
+    "cut_db": 0,
+    "detect_hz": 2200,
+    "detect_q": 0.33,
+    "gain_db": 5,
+    "ks": 0.75,
+    "ref_db": -25,
+    "rel_ms": 200,
+    "v4a_dynamic_bass": {
+      "api_field": "dynamic_bass",
+      "branch_of_default_preset": "simple",
+      "decision": "Simple branch done (x1 <= 120; the official default 100;5600;40;80;50;50 is exactly it), see dynbass.go, API field `dynamic_bass`; full branch (x1 > 120) **not done and explicitly rejected**: full branch currently unimplemented: buildable from existing opcodes (~11-12 slots), but the engine caps at 24 slots with 22 used by the baseline chain, so it does not fit alongside. **No new hardware needed**, lands in 0.3.",
+      "default_preset_x1": 100,
+      "implemented": false,
+      "needs_owner_decision": false,
+      "side_channel_lag_samples": 1,
+      "simple_branch_max_x1": 120,
+      "source": "refs/viperfx-re/src/viper/utils/DynamicBass.cpp:21-28 (simple branch)/:29-41 (full branch); default preset x1=100 refs/viper4android_fx/android_4.x/res/xml/headset_preferences_l2.xml:274",
+      "why": "This unit's DYN is sidechain detection plus slow level-following gain (≈ V4A PlaybackGain), a different algorithm from V4A DynamicBass, so this adds a **new stage** rather than changing branches; the simple branch's same-sample L+R can only do same-frame on the R pass and 1-sample-late R on the L pass here (measured by TB, see fpga/src/tb/tb_engine_xphase.v)"
+    }
+  },
+  "dynamic_bass": null,
+  "exciter": null,
+  "fx_preset": [],
+  "gain_db": 0,
+  "limiter": {
+    "mode": "truepeak",
+    "on": true,
+    "rel_ms": 56.88368039659528,
+    "thr_db": -1
+  },
+  "loudness": {
+    "offset_db": 10,
+    "on": false,
+    "strength": 0.5
+  },
+  "preamp_db": 0,
+  "speaker_correction": null,
+  "surround": null,
+  "tube": null,
+  "type": "ClearPenguin",
+  "unsupported": {},
+  "viperbass": null,
+  "vse": null
+}

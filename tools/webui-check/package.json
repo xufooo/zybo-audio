@@ -1,0 +1,7 @@
+{
+  "name": "zybo-audio-webui-check",
+  "private": true,
+  "dependencies": {
+    "jsdom": "30.0.1"
+  }
+}

@@ -1,0 +1,171 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# ============================================================================
+# config.fragment — Kernel Config Fragment for ZYBO Audio (linux-xlnx 6.6 LTS)
+# ============================================================================
+# Applied on top of xilinx_zynq_defconfig (linux-xlnx 6.6 LTS, matching Vivado 2024.1).
+# Usage (CI or manual): make xilinx_zynq_defconfig && scripts/kconfig/merge_config.sh -m .config <this file> && make olddefconfig
+# Design basis: PL330 + adi,axi-i2s + ssm2602 + simple-audio-card
+
+# --- Sound / ALSA -----------------------------------------------------------
+CONFIG_SOUND=y
+CONFIG_SND=y
+CONFIG_SND_SOC=y
+CONFIG_SND_SOC_I2C_AND_SPI=y
+CONFIG_SND_VERBOSE_PROCFS=y
+CONFIG_SND_DEBUG=y
+CONFIG_SND_PCM_XRUN_DEBUG=y
+
+# --- ASoC simple-audio-card (pure device-tree sound card) -------------------
+CONFIG_SND_SIMPLE_CARD=y
+CONFIG_SND_SIMPLE_CARD_UTILS=y
+CONFIG_SND_SOC_GENERIC_DMAENGINE_PCM=y
+
+# --- CPU DAI: ADI AXI-I2S (PL330 mode; Digilent axi_i2s_adi register compatible) ---
+CONFIG_SND_SOC_ADI=y
+CONFIG_SND_SOC_ADI_AXI_I2S=y
+
+# --- Codec: SSM2603 (driven by the ssm2602 driver) --------------------------
+CONFIG_SND_SOC_SSM2602=y
+CONFIG_SND_SOC_SSM2602_I2C=y
+
+# --- DMA: Zynq built-in PL330 (used by this design; no Xilinx AXI DMA) ------
+CONFIG_DMADEVICES=y
+CONFIG_PL330_DMA=y
+# Alternative (AXI DMA + audio formatter, requires the matching IP in the BD):
+# CONFIG_XILINX_DMA=y
+# CONFIG_XILINX_DMA_ENGINE=y
+# CONFIG_AXI_DMAC=y
+# CONFIG_SND_SOC_XILINX_AUDIO_FORMATTER=y
+
+# --- I2C (AXI IIC controller) ----------------------------------------------
+CONFIG_I2C=y
+CONFIG_I2C_CHARDEV=y
+CONFIG_I2C_XILINX=y
+CONFIG_I2C_CADENCE=y
+
+# --- GPIO -------------------------------------------------------------------
+CONFIG_GPIO_SYSFS=y
+CONFIG_GPIO_XILINX=y
+CONFIG_GPIO_ZYNQ=y
+CONFIG_GPIO_GENERIC_PLATFORM=y
+
+# --- SPI --------------------------------------------------------------------
+CONFIG_SPI=y
+CONFIG_SPI_XILINX=y
+CONFIG_SPI_CADENCE=y
+
+# --- USB & Networking -------------------------------------------------------
+CONFIG_USB=y
+CONFIG_USB_EHCI_HCD=y
+CONFIG_USB_ULPI=y
+CONFIG_USB_GADGET=y
+CONFIG_USB_ETH=y
+CONFIG_NET=y
+CONFIG_PACKET=y
+CONFIG_UNIX=y
+
+# --- Filesystems ------------------------------------------------------------
+CONFIG_EXT4_FS=y
+CONFIG_VFAT_FS=y
+CONFIG_MSDOS_FS=y
+CONFIG_FUSE_FS=y
+
+# --- UIO (optional path for Phase-3 DSP register access) --------------------
+CONFIG_UIO=y
+CONFIG_UIO_PDRV_GENIRQ=y
+
+# --- Distro userspace (Debian armhf + systemd) ------------------------------
+# xilinx_zynq_defconfig targets embedded systems: cgroup controllers, namespaces,
+# fanotify and tmpfs POSIX ACLs are all disabled. A minimal Buildroot system does
+# not need them, but with Debian on top systemd degrades badly (service isolation
+# and resource control stop working, and many units report errors).
+CONFIG_CGROUPS=y
+CONFIG_CGROUP_FREEZER=y
+CONFIG_CGROUP_DEVICE=y
+CONFIG_CGROUP_SCHED=y
+CONFIG_CGROUP_PIDS=y
+CONFIG_CGROUP_BPF=y
+CONFIG_MEMCG=y
+CONFIG_CPUSETS=y
+CONFIG_BPF_SYSCALL=y
+CONFIG_NAMESPACES=y
+CONFIG_UTS_NS=y
+CONFIG_IPC_NS=y
+CONFIG_PID_NS=y
+CONFIG_NET_NS=y
+CONFIG_USER_NS=y
+CONFIG_FANOTIFY=y
+CONFIG_FANOTIFY_ACCESS_PERMISSIONS=y
+CONFIG_AUTOFS4_FS=y
+CONFIG_TMPFS_XATTR=y
+CONFIG_TMPFS_POSIX_ACL=y
+CONFIG_EXT4_FS_POSIX_ACL=y
+CONFIG_EXT4_FS_SECURITY=y
+CONFIG_SECCOMP=y
+CONFIG_SECCOMP_FILTER=y
+
+# --- Audio tooling conveniences ---------------------------------------------
+# /proc/config.gz: inspect the running kernel configuration on the board
+CONFIG_IKCONFIG=y
+CONFIG_IKCONFIG_PROC=y
+
+# --- USB WiFi: the released image supports common dongles (2026-09-10) ------
+# xilinx_zynq_defconfig leaves the whole wireless stack disabled (no CFG80211,
+# MAC80211 or RFKILL), and the staging r8188eu driver was removed in 6.6, so all
+# support comes from mainline drivers.
+# Configured for "any common model works", not just one specific dongle.
+#   Coverage (mainline driver in parentheses):
+#     RTL8188EU/CU, RTL8192CU/EU, RTL8188FU, RTL8723BU, RTL8188GU   -> rtl8xxxu
+#     RTL8821CU, RTL8723DU, RTL8822BU/CU                            -> rtw88 (USB)
+#     MT7601U (the most common cheap 150M part)                     -> mt7601u
+#     MT7610U / MT7612U / MT7921AU                                  -> mt76 (x0u/x2u/7921u)
+#     RT5370 / RT3070 / RT2070 and similar                          -> rt2800usb
+#     AR9271 (e.g. TP-Link TL-WN722N v1)                            -> ath9k_htc
+#   NOT covered: dual-band AC dongles such as RTL8811AU/8812AU/8814AU/8821AU.
+#     They are not in mainline Linux and need an out-of-tree driver, which the
+#     released image does not include (see README).
+# Firmware and userspace (Debian side): firmware-realtek / firmware-mediatek /
+#   firmware-atheros / firmware-misc-nonfree(rt2870.bin) + wpasupplicant + iw +
+#   rfkill + wireless-regdb.
+# Dependencies verified: LEDS_CLASS / USB / CRYPTO / CRC32 are already y.
+CONFIG_RFKILL=y
+CONFIG_CFG80211=y
+CONFIG_MAC80211=y
+# -- Realtek
+CONFIG_RTL8XXXU=y
+CONFIG_RTL8XXXU_UNTESTED=y
+# NOTE: RTW88 is wrapped in a menuconfig gate. Without CONFIG_RTW88=y, olddefconfig
+#    silently drops every CONFIG_RTW88_* below (the RTW88_CORE/USB/chip options
+#    never reach .config) while the build still reports success.
+CONFIG_RTW88=y
+CONFIG_RTW88_CORE=y
+CONFIG_RTW88_USB=y
+CONFIG_RTW88_8821CU=y
+CONFIG_RTW88_8723DU=y
+CONFIG_RTW88_8822BU=y
+CONFIG_RTW88_8822CU=y
+# -- MediaTek
+CONFIG_MT7601U=y
+CONFIG_MT76_CORE=y
+CONFIG_MT76_USB=y
+CONFIG_MT76x02_LIB=y
+CONFIG_MT76x02_USB=y
+CONFIG_MT76x0U=y
+CONFIG_MT76x2U=y
+CONFIG_MT792x_LIB=y
+CONFIG_MT792x_USB=y
+CONFIG_MT7921U=y
+# -- Ralink
+CONFIG_RT2X00=y
+CONFIG_RT2X00_LIB_USB=y
+CONFIG_RT2800USB=y
+CONFIG_RT2800USB_RT33XX=y
+CONFIG_RT2800USB_RT35XX=y
+CONFIG_RT2800USB_RT3573=y
+CONFIG_RT2800USB_RT53XX=y
+CONFIG_RT2800USB_RT55XX=y
+CONFIG_RT2800USB_UNKNOWN=y
+# -- Atheros
+CONFIG_ATH9K_HW=y
+CONFIG_ATH9K_COMMON=y
+CONFIG_ATH9K_HTC=y

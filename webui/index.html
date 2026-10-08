@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ZYBO Audio</title>
+<style>
+:root{--bg:#0f1215;--panel:#171b1f;--panel2:#1e2429;--line:#2a3138;--fg:#e8edf2;
+ --fg2:#9aa7b4;--fg3:#6b7a89;--acc:#4aa8ff;--on:#3ddc84;--warn:#ffb454}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--fg);
+ font:16px/1.5 -apple-system,BlinkMacSystemFont,"Noto Sans CJK SC",sans-serif}
+.wrap{max-width:460px;margin:0 auto;padding:12px 12px 48px}
+h1{font-size:18px;margin:6px 0 10px}
+h1 .v{font-size:12px;color:var(--fg3);font-weight:400}
+h2{font-size:13px;color:var(--fg3);font-weight:700;letter-spacing:.08em;margin:20px 0 9px}
+.top{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--line);
+ border-radius:12px;padding:12px 14px}
+.top .nm{font-size:16px;font-weight:650}
+.top .sub{font-size:12.5px;color:var(--fg3);margin-top:2px}
+.top .slots{margin-left:auto;font-size:13px;color:var(--fg2);font-variant-numeric:tabular-nums}
+/* Cards: wrap onto multiple rows so all 12 are visible at once (changed 2026-09-28, see below)
+   NOTE: this used to be `flex-wrap:nowrap` + `overflow-x:auto`, scrolled sideways, on the
+   grounds that "letting flex-wrap stack all 12 into a wall of cards" was worse. **That
+   trade-off is overturned** -- measured in a real browser:
+     the panel's .wrap max-width is only 460px, so the strip shows 436px of a 1420px row:
+     **984px of horizontal overflow, only 3 of the 12 cards visible** (ClearPenguin /
+     Headphones Basic Crossfeed / Dynami... get cut off) and the remaining 9 need a sideways
+     scroll to see; the scrollbar is then hidden by scrollbar-width:none, so **nothing on the
+     page hints that anything is off to the right**. The owner reported "the cards are not all
+     showing" -- correctly. "9 cards you cannot see" is worse than "a few extra rows", so we
+     wrap again: 4 rows, every card keeps its natural width, and **no name is truncated**
+     (a name is the sound). The page already scrolls vertically (1287px of content in a 655px
+     viewport), so the three extra rows cost nothing. */
+.strip{display:flex;gap:8px;flex-wrap:wrap;padding:2px 0 10px}
+.card{flex:0 0 auto;min-height:46px;padding:0 15px;border-radius:999px;border:1px solid var(--line);
+ background:var(--panel);color:var(--fg2);font-size:14.5px;white-space:nowrap;cursor:pointer}
+.card.on{background:var(--acc);border-color:var(--acc);color:#04121f;font-weight:650}
+/* Edit text button in the effects header: out of the way normally, badges appear in edit mode */
+.linkbtn{background:none;border:0;color:var(--fg3);font-size:13px;cursor:pointer;
+ min-height:44px;padding:0 6px;white-space:nowrap}
+.linkbtn.on{color:var(--acc);font-weight:650}
+/* Action badges on cards: display:none normally, shown in edit mode (.strip.manage opens the gate) */
+.card{position:relative}
+.card .bdg{display:none;position:absolute;top:-9px;width:26px;height:26px;border-radius:50%;
+ border:1px solid var(--line);background:var(--panel2);color:var(--fg2);font-size:13px;
+ align-items:center;justify-content:center;cursor:pointer}
+.strip.manage .card .bdg{display:flex}
+.card .bdg.del{right:-7px}
+.card .bdg.dup{right:22px}
+/* Custom dialog (replaces native prompt/confirm) */
+.sheetWrap{position:fixed;left:0;right:0;top:0;bottom:0;background:rgba(0,0,0,.55);
+ display:flex;align-items:center;justify-content:center;z-index:50;padding:0 24px}
+.sheet{width:100%;max-width:340px;border-radius:14px;border:1px solid var(--line);
+ background:var(--panel);padding:18px 16px 14px}
+.sheetT{font-size:15px;font-weight:650;margin-bottom:10px}
+.sheetMsg{font-size:13.5px;color:var(--fg2);margin-bottom:12px}
+.sheetIn{width:100%;min-height:44px;border-radius:9px;border:1px solid var(--line);
+ background:var(--bg);color:var(--fg);font-size:15px;padding:0 12px;box-sizing:border-box;margin-bottom:12px}
+.sheetBtns{display:flex;gap:8px}
+.sheetBtns button{flex:1;min-height:44px;border-radius:9px;border:1px solid var(--line);
+ background:var(--panel2);color:var(--fg2);font-size:14px}
+.sheetBtns #sheetOk{background:var(--acc);border-color:var(--acc);color:#04121f;font-weight:650}
+.sheetBtns #sheetDel{background:var(--warn);border-color:var(--warn);color:#fff;font-weight:650}
+/* ── Top bar / now playing / source / volume: each is "one row", not a card ── */
+.bar{display:flex;align-items:center;gap:8px;padding:6px 0 10px}
+.bar .brand{font-size:17px;font-weight:600;letter-spacing:.2px}
+.bar .byp{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:13px;color:var(--fg3)}
+.np{display:flex;align-items:center;gap:8px;font-size:14px;padding:0 0 8px;
+ white-space:nowrap;overflow:hidden}
+.np .dim{color:var(--fg3);font-size:12.5px;overflow:hidden;text-overflow:ellipsis}
+.np #npSrc{margin-left:auto}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--fg3);flex:0 0 auto}
+.dot.live{background:var(--on)}
+.vol{display:flex;align-items:center;gap:10px;padding:0 2px 10px}
+.vol input[type=range]{flex:1}
+.vol b{font-size:13.5px;font-variant-numeric:tabular-nums;min-width:40px;text-align:right}
+.seg.sm{margin:0 0 12px}
+.seg.sm button{min-height:44px;font-size:13px;min-width:0}
+.cur{display:flex;align-items:baseline;gap:9px;padding:12px 0 2px}
+.cur b{font-size:15px;font-weight:600}
+.cur .dim{font-size:12.5px;color:var(--fg3);flex:1;min-width:0;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cur .slots{font-size:12.5px;color:var(--fg3);font-variant-numeric:tabular-nums}
+.cur .slots.over{color:var(--warn);font-weight:700}   /* Over the engine's 24 slots: mark it red and stop — never drop anything automatically. */
+
+/* ── Settings list: **full width** (one container + dividers), not one card per row ── */
+.sechd{display:flex;align-items:center;gap:9px;padding:16px 0 9px}
+.sechd .t{font-size:13px;color:var(--fg3);font-weight:600;letter-spacing:.08em}
+.sechd .dim{font-size:12px;color:var(--fg3);margin-left:auto;margin-right:2px}
+.list{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.cap{border-top:1px solid var(--line)}
+.cap:first-child{border-top:0}
+.cap.on .nm{color:#fff}
+/* A flat row: name | current value (takes the middle, ellipsis when too long) | slots + switch.
+   Tapping the row opens its controls — "show everything" and "do not turn into a wall of sliders" both hold. */
+.hd{display:flex;align-items:center;gap:9px;padding:7px 13px;min-height:48px;cursor:pointer}
+.hd .nm{font-size:15px;font-weight:600;flex:0 0 auto}
+.hd .sum{font-size:12.5px;color:var(--fg3);flex:1 1 auto;min-width:0;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hd .rt{margin-left:auto;display:flex;align-items:center;gap:9px;flex:0 0 auto}
+/* Chevron on expandable rows: none without a body; rotates up when open */
+.hd .chev{font-size:12px;color:var(--fg3);transition:transform .15s;flex:0 0 auto}
+.cap.open .hd .chev{transform:rotate(180deg)}
+.hd .cost{font-size:12px;color:var(--fg3);background:var(--panel2);border-radius:6px;
+ padding:2px 7px;font-variant-numeric:tabular-nums}
+/* Switch: what you **see** is the 26px pill, what you can **hit** is 44x44.
+   Why two layers: the hit-target rule is about "a finger can reach it", not about "how big the visible thing is".
+   The button itself used to be 26px tall (`.sw`): it looked tidy but was on the small side to hit — every capability has one and you tap them dozens of times a day.
+   The fix: a transparent 44x44 button, the visible pill centred with ::before, and the knob following on ::after.
+   `margin:-9px 0` is **deliberately kept**: it lets those 44px take up only 26px of layout (so the row height does not change) while what you can hit is still 44px — the row holding the master switch at the top has no min-height, and without the negative margin it would be pushed taller.
+   That leaves the row height and the look alone; only the hittable area grows. */
+.sw{width:44px;height:44px;background:none;border:0;padding:0;margin:-9px 0;
+ position:relative;cursor:pointer;flex:0 0 auto}
+.sw::before{content:"";position:absolute;left:0;right:0;top:50%;height:26px;margin-top:-13px;
+ border-radius:999px;border:1px solid var(--line);background:var(--panel2);transition:.15s}
+.sw::after{content:"";position:absolute;top:50%;margin-top:-10px;left:2px;width:20px;height:20px;
+ border-radius:50%;background:var(--fg3);transition:.15s}
+.sw.on::before{background:var(--on);border-color:var(--on)}
+.sw.on::after{left:22px;background:#04160c}
+.sw:disabled{opacity:.35}
+/* The master switch at the top is a size smaller, but its **hit area is still 44px** (small is not the same as hard to tap) */
+.sw.sm{width:38px}
+.sw.sm::before{left:2px;right:2px;height:22px;margin-top:-11px}
+.sw.sm::after{width:16px;height:16px;margin-top:-8px;left:4px}
+.sw.sm.on::after{left:18px}
+/* All 17 capabilities are **always there** (name + switch + current value in one row, value shown even when off); tapping a row opens its controls.
+   That way "show everything" and "not a wall of sliders" both hold: you see the value without opening, and only adjust after opening. */
+.body{display:none;padding:0 14px 14px;border-top:1px solid var(--line);margin-top:-1px}
+.cap.open .body{display:block}
+.fld{margin-top:12px}
+.fld .lab{display:flex;justify-content:space-between;font-size:12.5px;color:var(--fg2);margin-bottom:6px}
+.fld .lab b{color:var(--fg);font-variant-numeric:tabular-nums}
+/* Sliders: the input box itself is 44px tall (hittable) while the **drawn** track stays 6px with a 24px knob.
+   Same idea as the switch: hit area and appearance kept apart. */
+input[type=range]{width:100%;height:44px;margin:-9px 0;-webkit-appearance:none;background:transparent}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:var(--panel2)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;margin-top:-9px;
+ border-radius:50%;background:var(--acc);border:3px solid var(--bg)}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.seg button{flex:1 1 auto;min-width:64px;min-height:44px;border-radius:9px;border:1px solid var(--line);
+ background:var(--panel2);color:var(--fg2);font-size:13.5px}
+.seg button.on{background:var(--acc);border-color:var(--acc);color:#04121f;font-weight:650}
+.seg button:disabled{opacity:.35;text-decoration:line-through}
+.sel{width:100%;min-height:42px;border-radius:9px;background:var(--panel2);color:var(--fg);
+ border:1px solid var(--line);font-size:14px;padding:0 10px;margin-top:10px}
+.band{display:grid;grid-template-columns:1fr 1fr 1fr 44px;gap:7px;align-items:center;margin-top:9px}
+/* Each EQ band is three bare number boxes, unreadable without column labels: add a header row (same grid as .band). */
+.ehd{display:grid;grid-template-columns:1fr 1fr 1fr 44px;gap:7px;font-size:12px;
+ color:var(--fg3);margin-top:10px}
+.band input[type=number]{width:100%;min-height:44px;background:var(--panel2);color:var(--fg);
+ border:1px solid var(--line);border-radius:8px;font-size:13.5px;padding:0 7px}
+.band .x{min-height:44px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);
+ color:var(--ffg2);color:var(--fg2)}
+.mini{font-size:12px;color:var(--fg3);margin-top:9px;line-height:1.55}
+a{color:var(--acc)}
+.note{font-size:12.5px;color:var(--fg3);background:var(--panel);border:1px solid var(--line);
+ border-radius:10px;padding:9px 12px;margin-top:10px;line-height:1.6}
+.log{font-size:12px;color:var(--fg2);background:var(--panel);border:1px solid var(--line);
+ border-radius:10px;padding:10px 12px;margin-top:14px;white-space:pre-wrap;min-height:20px;
+ max-height:7.2em;overflow-y:auto;word-break:break-all}   /* Backend errors run long: cap the height so they cannot blow the page up. */
+.log .e{color:#ff6b6b}.log .k{color:var(--on)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- Top bar, one row: brand + bypass (a switch inline, it takes no block of its own). -->
+  <div class="bar">
+    <div class="brand">ZYBO Audio</div>
+  </div>
+
+  <!-- Now playing: one small line. -->
+  <div class="np">
+    <span class="dot" id="npDot"></span>
+    <span id="npTitle">Not playing</span>
+    <span class="dim" id="npSub">Cast to ZYBO Audio from your phone</span>
+    <span class="dim" id="npSrc">Idle</span>
+  </div>
+
+  <!-- Source: a row of small segments (shorter than the top bar). -->
+  <div class="seg sm" id="srcs"></div>
+
+  <!-- Volume: one row. -->
+  <div class="vol">
+    <span class="dim">Volume</span>
+    <input type="range" id="vol" min="0" max="100" step="1" value="90">
+    <b id="volTxt">—</b>
+  </div>
+
+  <!-- Current sound + slots: one row. -->
+  <div class="cur">
+    <b id="cur">No sound picked</b>
+    <span class="slots" id="slots">— slots</span>
+  </div>
+
+  <div class="sechd">
+    <span class="t">Sounds</span>
+    <button class="linkbtn" id="cardEdit">Edit</button>
+    <span class="dim" id="masterTxt"></span>
+    <button class="sw sm" id="master"></button>
+  </div>
+  <div class="strip" id="cards"></div>
+
+  <h2>Settings</h2>
+  <div class="list" id="caps"></div>
+  <div class="seg"><button id="cardSave">Save as effect</button></div>
+  <div class="seg"><button id="bkSave">Back up</button><button id="bkRestore">Restore</button></div>
+  <input type="file" id="bkfile" accept=".json,application/json" style="display:none">
+
+  <div class="log" id="log"></div>
+</div>
+<!-- Custom dialog: native prompt/confirm is unsupported in some browsers, input and confirm all go through it -->
+<div class="sheetWrap" id="sheetWrap" style="display:none">
+  <div class="sheet" role="dialog" aria-modal="true">
+    <div class="sheetT" id="sheetTitle"></div>
+    <div class="sheetMsg" id="sheetMsg" style="display:none"></div>
+    <input class="sheetIn" id="sheetIn" style="display:none" maxlength="24" placeholder="">
+    <div class="sheetBtns">
+      <button id="sheetOk">OK</button>
+      <button id="sheetDel" style="display:none">Delete</button>
+      <button id="sheetCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   Two blocks: (1) Sounds (a card = a combination of capabilities)
+   (2) Settings (the capabilities, each adjustable)
+   Pick a card → every capability in Settings takes the card's values;
+   change a setting → the top switches to "Custom".
+   The limiter is a protection level and lives in no sound card.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Capability definitions: this table drives the controls (data driven; adding a capability only means editing here) ── */
+const CAPS = [
+ {k:'viperbass', name:'Bass boost', cost:'2 slots', api:'viperbass',
+  fields:[{t:'seg', k:'mode', label:'Mode', opts:[[0,'Natural'],[1,'Pure Bass+']]},
+          {t:'rng', k:'cutoff_hz', label:'Cutoff', min:30, max:100, step:2, unit:' Hz'},
+          {t:'rng', k:'gain', label:'Gain', min:50, max:600, step:10}]},
+ {k:'dynamic_bass', name:'Dynamic bass', cost:'4 slots', api:'dynamic_bass',
+  fields:[{t:'rng', k:'bass', label:'Strength', min:0, max:100, step:1}],
+  note:'coefficients from the V4A stock device profile Common Earphone(v2) (the only one of the 19 this unit can run)'},
+ {k:'dyn_bass', name:'Dynamic level', cost:'2 slots', api:'dyn_bass',
+  fields:[{t:'rng', k:'gain_db', label:'Boost', min:0, max:12, step:0.5, unit:' dB'},
+          {t:'rng', k:'ref_db', label:'Reference level', min:-60, max:0, step:1, unit:' dB'},
+          {t:'rng', k:'rel_ms', label:'Release', min:10, max:2000, step:10, unit:' ms'}]},
+ {k:'clarity', name:'Clarity', cost:'1 slot', api:'clarity',
+  fields:[{t:'seg', k:'mode', label:'Mode', opts:[['natural','Natural'],['ozone','Ozone'],['xhifi','XHiFi']]},
+          {t:'rng', k:'level', label:'Strength', min:0, max:100, step:1}]},
+ {k:'vse', name:'Harmonic exciter', cost:'4 slots', api:'vse',
+  fields:[{t:'rng', k:'gear', label:'Gear', min:0.1, max:1, step:0.1}]},
+ {k:'tube', name:'Tube warmth', cost:'1 slot', api:'tube', fields:[]},
+ {k:'analogx', name:'Analog flavor', cost:'5 slots', api:'analogx',
+  fields:[{t:'seg', k:'model', label:'Gear', opts:[[0,'Light'],[1,'Medium'],[2,'Strong']]}]},
+ {k:'crossfeed', name:'Headphone crossfeed', cost:'3 slots', api:'crossfeed',
+  fields:[{t:'rng', k:'fcut_hz', label:'Cutoff', min:300, max:2000, step:10, unit:' Hz'},
+          {t:'rng', k:'feed', label:'Feed', min:10, max:150, step:5}]},
+  // Surround delay (V4A DiffSurround / Haas): the backend, DEF and sumOf have always had it; only CAPS was missing it
+  // ⇒ buildChain could never send it, so the "Sound stage" card did nothing even when selected. 0.3 adds it.
+  {k:'surround', name:'Surround delay', cost:'1 slot', api:'surround',
+   fields:[{t:'rng', k:'delay_ms', label:'Delay', min:2, max:20, step:0.5, unit:' ms'}]},
+ {k:'colorfulmusic', name:'Field surround', cost:'2 slots', api:'colorfulmusic',
+  fields:[{t:'rng', k:'widening', label:'Widening', min:1.2, max:2, step:0.05},
+          {t:'rng', k:'depth', label:'Depth', min:200, max:800, step:10},
+          {t:'rng', k:'mid_image', label:'Centre image', min:1, max:2, step:0.05}]},
+ {k:'loudness', name:'Loudness', cost:0, api:'loudness', sep:true,
+  fields:[{t:'rng', k:'strength', label:'Strength', min:0, max:1, step:0.05},
+          {t:'rng', k:'offset_db', label:'Reference offset', min:0, max:15, step:1, unit:' dB'}]},
+ {k:'speaker_correction', name:'Speaker correction', cost:'1 slot', api:'speaker_correction', fields:[]},
+ {k:'gain', name:'Overall gain', cost:0, sep:true,
+  fields:[{t:'rng', k:'gain_db', label:'Gain', min:0, max:12, step:1, unit:' dB'}]},
+ {k:'limiter', name:'Peak limiter', cost:0, api:'limiter', sep:true, protect:true,
+  fields:[{t:'seg', k:'mode', label:'Mode', opts:[['feedback','Feedback'],['truepeak','True peak']]},
+          {t:'rng', k:'thr_db', label:'Threshold', min:-60, max:0, step:0.5, unit:' dB'},
+          {t:'rng', k:'rel_ms', label:'Release', min:1, max:2000, step:1, unit:' ms'}]},
+ {k:'eq', name:'Equalizer', cost:'3 bands/slot', eq:true},
+ {k:'ir', name:'Convolution', cost:'1 slot', res:'ir'},
+ {k:'ddc', name:'Device correction', cost:'n/3 slots', res:'ddc', link:'autoeq.html'},
+];
+
+/* ── Sound cards: only 4 community combos inlined out of 12 (full set and sources: effect-cards.json) ── */
+const CARDS = [];
+
+const DEF = {
+  // Overall gain (0..+12 dB): gets back the volume the in-chain headroom took away. **Not part of card switching** (same as limiter / convolution / device correction)
+  gain:{on:true, gain_db:0},
+  viperbass:{on:false, mode:0, cutoff_hz:60, gain:300},
+  dynamic_bass:{on:false, bass:0, coeffs:'100;5600;40;80;50;50'},
+  dyn_bass:{on:false, gain_db:6, ref_db:-25, rel_ms:200},
+  clarity:{on:false, mode:'natural', level:50},
+  vse:{on:false, gear:0.3},
+  tube:{on:false},
+  analogx:{on:false, model:0},
+  crossfeed:{on:false, fcut_hz:700, feed:60},
+  surround:{on:false, delay_ms:2.5},
+  colorfulmusic:{on:false, widening:1.2, depth:200, mid_image:1.5},
+  loudness:{on:false, strength:0.5, offset_db:10},
+  speaker_correction:{on:false},
+  limiter:{on:true, mode:'truepeak', thr_db:-1, rel_ms:60},
+  eq:{on:true, bands:[]},
+  ir:{on:false, name:''},
+  ddc:{on:false, name:'', sections:0},
+};
+
+let S = JSON.parse(JSON.stringify(DEF));
+let curCard = '';
+let timer = null;
+// Custom cards live in backend type 'My effects'; one card = one effect {kind:'combo', desc: the caps as JSON}
+// (Params holds numbers only; mode/coeffs/bands do not fit together; the backend passes effects through, the panel owns the convention) 
+const UTYPE = 'My effects';
+let userCards = [];
+// Hidden built-in ids live in the desc array of a hidden effect in the same type (backend passes through). 
+// Deleting a built-in hides it (not really deleted); edit mode has a restore button. 
+let hiddenIds = [];
+// Edit mode: zero buttons on the strip normally; badges appear after tapping Edit (duplicate for all, delete for customs only) 
+let manage = false;
+// Serial queue for the types API: save/delete are read-modify-write, two in parallel lose a card 
+// (measured: tapping two delete buttons back to back lost one). Humans rarely hit it, but queueing is nearly free. 
+let typeQ = Promise.resolve();
+function typeSeq(fn){ const r = typeQ.then(fn, fn); typeQ = r.catch(() => {}); return r; }
+// EQ frequency range the board reports for itself (min_freq_hz / max_freq_hz in /api/dsp/capabilities):
+// used to compare a card's frequencies against **what the board will clamp them to** (see sameBands).
+let hwMinFreq = 20, hwMaxFreq = 20000;
+let hwBands = 48;      // band ceiling the hardware reports for itself (bands in /api/dsp/capabilities), used for the local pre-check before sending
+let boardOK = true;    // whether the last read of the board succeeded: offline only warns once, no scroll spam
+
+// Slot budget the backend reports for itself (0.3 §4.1, GET /api/dsp/budget): {limit, used, per:{id→slots}}.
+// The badge and the total at the top used to come from a hard-coded cost table inside the panel, and that table is wrong on an old bitstream
+// (NSLOT=8 while the software constant says 24) — the backend can work this out, so let it report.
+let BUDGET = {limit: 24, used: null, per: {}};
+
+// Overall gain: **the old panel kept it in `zybo_gain_db` and sent it** (archive/index-0.2.html:500,505).
+// the new panel once dropped the whole thing ⇒ every send carried req.GainDB = 0 ⇒ the gain the user had set was silently wiped,
+// which sounds like "the effects are quieter than bypass". Same key reused, so the old value comes back on its own.
+function setGain(v){
+  const x = isFinite(+v) ? +v : 0;
+  S.gain.gain_db = Math.max(0, Math.min(12, +x.toFixed(1)));
+  try{ localStorage.setItem('zybo_gain_db', String(S.gain.gain_db)); }catch(e){}
+}
+try{ setGain(parseFloat(localStorage.getItem('zybo_gain_db'))); }catch(e){}
+let gainPushedOnce = false;
+let gainFromBoard = false;    // a new backend reports gain_db   // an old one does not ⇒ send our copy once after the first refresh, so the UI has a value while the board has 0
+const $ = id => document.getElementById(id);
+const logEl = $('log');
+// The plain sentence for a capacity overflow: read the machine-readable fields the backend sends (code/what/needed/limit, 0.3 §4.2)
+// instead of parsing the Chinese sentence the backend writes.
+//
+// Why 0.3 deleted the two Chinese regexes (0.2 pulled the numbers out of the error text with a regex):
+//   (1) there is no Chinese to parse in the English panel — the same logic is bound to mismatch there;
+//   (2) one fact, two wordings, one on each side; when the backend changes a sentence you have to remember a second place, and **missing that raises no error** —
+//      it just degrades silently into "a screen of band-by-band noise" (which is exactly the failure the 0.2 regex was there to hide).
+// Fields are a contract, prose is not: the contract is stable, and it already carries what the panel needs to say (how many over, on which axis).
+const capMsg = d => {
+  if(!d || d.code !== 'capacity') return null;   // an old backend has no such fields ⇒ hand it back to the caller to fall back on
+  if(d.what === 'bands')
+    return 'Too many bands: need ' + d.needed + ' bands, hardware has only ' + d.limit + ' bands — switch off a few EQ or device-correction bands first';
+  if(d.what === 'slots')
+    return 'Too many slots: this chain needs ' + d.needed + ' slots, engine has only ' + d.limit + ' — switch one card off first';
+  if(d.what === 'sections')
+    return 'Too many bands: this chain has ' + d.needed + ' bands, engine limit is ' + d.limit + ' bands — switch one card off first';
+  return 'Does not fit: ' + d.what + ' needs ' + d.needed + ', limit ' + d.limit;
+};
+function say(m, c){
+  // a backend capacity error lists the whole chain band by band ("…(PK@41.2, PK@63 …)"), which dumped into the status line is a screen of noise:
+  // condense with capMsg when the caller could, truncate when it could not; the status line CSS caps the height too.
+  m = String(m);
+  if(m.length > 150) m = m.slice(0, 150) + '…';
+  logEl.textContent = m;
+  logEl.className = c ? ('log ' + c) : 'log';
+}
+
+const clone = o => JSON.parse(JSON.stringify(o));
+
+/* ── Sound cards ── */
+function applyCard(card){
+  // start from the **current state**: only flip on/off and set the values the card actually writes; every other value is **kept as it is**
+  // (values are kept even while off, that is the existing rule); otherwise picking a card would wipe the EQ bands you had tuned.
+  const next = clone(S);
+  for(const k of Object.keys(next)) next[k].on = false;
+  // the limiter is a **protection level**, it belongs to no sound card — picking a card must never touch it
+  next.limiter = clone(S.limiter);
+  // overall gain is the same (no card ever carries it): the turn-everything-off loop above would flip it off, and the send formula is
+  // `S.gain.on ? gain_db : 0` ⇒ one card switch would wipe the gain the user set back to 0,
+  // which makes the whole chain sound quieter than bypass. Keep the current value across a card switch (the send now always carries gain_db, so this still guards it first).
+  next.gain = clone(S.gain);
+  for(const [k, v] of Object.entries(card.caps)){
+    if(!next[k]) continue;
+    next[k] = Object.assign({}, next[k], clone(v), {on:true});
+    if(k === 'eq' && v.bands) next.eq.bands = clone(v.bands);
+  }
+  S = next; curCard = card.name;
+  renderAll(); schedule();
+  // when the card strip and the settings are not on one screen, scroll the settings into view after picking a card ("picked a card and still have to scroll down myself")
+  const el = $('caps');
+  const r = el.getBoundingClientRect();
+  if(r.top > innerHeight * 0.55 || r.bottom < 80)
+    el.scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+/* ── Rendering ── */
+function renderCards(){
+  const box = $('cards'); box.innerHTML = '';
+  box.classList.toggle('manage', manage);
+  // The strip only applies by name: zero buttons normally; badges appear after tapping Edit 
+  // Hidden built-ins are not drawn (restore button lives in edit mode). 
+  const shown = CARDS.filter(c => !hiddenIds.includes(c.id));
+  for(const c of shown.concat(userCards)){
+    const b = document.createElement('button');
+    b.className = 'card' + (c.user ? ' user' : '') + (c.name === curCard ? ' on' : '');
+    b.textContent = c.name;
+    b.title = c.user ? 'Custom card' : (c.slots + ' slots · ' + (c.src || ''));
+    b.onclick = () => applyCard(c);
+    const cp = document.createElement('span');
+    cp.className = 'bdg dup'; cp.textContent = '⧉'; cp.title = 'Duplicate this card';
+    cp.onclick = e => { e.stopPropagation(); dupCard(c); };
+    b.appendChild(cp);
+    const x = document.createElement('span');
+    x.className = 'bdg del'; x.textContent = '✕'; x.title = 'Delete this card';
+    x.onclick = e => { e.stopPropagation(); delUserCard(c); };
+    b.appendChild(x);
+    box.appendChild(b);
+  }
+  // In edit mode with hidden built-ins, offer a restore entry (or they would be truly lost) 
+  if(manage && hiddenIds.length){
+    const r = document.createElement('button');
+    r.className = 'card'; r.id = 'cardRestore';
+    r.textContent = 'Restore built-in cards';
+    r.onclick = restoreHidden;
+    box.appendChild(r);
+  }
+}
+// Restore hidden built-ins (button visible in edit mode only) 
+async function restoreHidden(){
+  return typeSeq(async () => {
+    const d = await (await fetch('/api/dsp/types')).json();
+    const t = (d.types || []).find(t => t.name === UTYPE && !t.builtin);
+    const effects = ((t && t.effects) || []).filter(e => e.id !== 'hidden');
+    if(!effects.length) await post('/api/dsp/types/delete', {name: UTYPE});
+    else await post('/api/dsp/types', {name: UTYPE, effects: effects});
+    await loadUserCards();
+    renderAll();
+    say('Restored');
+  }).catch(e => say('Restore failed: ' + e.message));
+}
+// In-page sheet (native prompt/confirm unsupported in some browsers): title + optional input + OK/Cancel, 
+// delete swaps OK for a red Delete button. Cancel on input returns null, on confirm returns false. 
+function sheet(o){
+  return new Promise(res => {
+    $('sheetTitle').textContent = o.title;
+    const msg = $('sheetMsg'), inp = $('sheetIn');
+    const ok = $('sheetOk'), del = $('sheetDel'), cx = $('sheetCancel');
+    msg.style.display = o.msg ? '' : 'none';
+    if(o.msg) msg.textContent = o.msg;
+    inp.style.display = o.input ? '' : 'none';
+    if(o.input){ inp.value = o.input.value || ''; inp.placeholder = o.input.hint || ''; }
+    ok.style.display = o.danger ? 'none' : '';
+    del.style.display = o.danger ? '' : 'none';
+    $('sheetWrap').style.display = '';
+    if(o.input) setTimeout(() => { try{ inp.focus(); }catch(e){} }, 60);
+    const done = v => {
+      $('sheetWrap').style.display = 'none';
+      ok.onclick = del.onclick = cx.onclick = null; inp.onkeydown = null;
+      res(v);
+    };
+    ok.onclick = () => done(o.input ? inp.value.trim() : true);
+    del.onclick = () => done(true);
+    cx.onclick = () => done(o.input ? null : false);
+    inp.onkeydown = e => { if(e.key === 'Enter') ok.onclick(); };
+  });
+}
+// Reload custom cards (boot/save/delete); missing means none 
+async function loadUserCards(){
+  userCards = []; hiddenIds = [];
+  try{
+    const d = await (await fetch('/api/dsp/types')).json();
+    const t = (d.types || []).find(t => t.name === UTYPE && !t.builtin);
+    for(const e of ((t && t.effects) || [])){
+      if(e.kind === 'hidden' && e.id === 'hidden'){
+        try{
+          const h = JSON.parse(e.desc || '[]');
+          if(Array.isArray(h)) hiddenIds = h.filter(x => typeof x === 'string');
+        }catch(err){}
+        continue;
+      }
+      if(e.kind !== 'combo' || !e.id || !e.name) continue;
+      let caps = null;
+      try{ caps = JSON.parse(e.desc || 'null'); }catch(err){ continue; }
+      if(!caps || typeof caps !== 'object') continue;
+      // Only known capability keys; old formats and hand edits stay out 
+      const ok = {};
+      for(const k of Object.keys(caps)){
+        if(k === 'limiter' || k === 'gain' || k === 'ir' || k === 'ddc') continue;
+        if(!S[k] || typeof caps[k] !== 'object') continue;
+        ok[k] = caps[k];
+      }
+      if(!Object.keys(ok).length) continue;
+      userCards.push({id: e.id, name: e.name, caps: ok, user: true});
+    }
+  }catch(e){}
+}
+// Save custom card: only capabilities that are on (limiter/gain/IR/DDC belong to no card) 
+async function saveUserCard(){
+  const name = await sheet({title: 'Save as effect', input: {hint: 'Name it'}});
+  if(name === null) return;
+  if(!name){ say('Name cannot be empty'); return; }
+  const caps = {};
+  for(const k of Object.keys(S)){
+    if(k === 'limiter' || k === 'gain' || k === 'ir' || k === 'ddc') continue;
+    if(S[k].on) caps[k] = clone(S[k]);
+  }
+  if(!Object.keys(caps).length){ say('Nothing is on -- turn something on first'); return; }
+  saveCapsAsCard(name, caps);
+}
+// Duplicate: save one card's values as another card (original untouched) 
+async function dupCard(c){
+  const name = await sheet({title: 'Duplicate effect', input: {value: c.name + ' 2', hint: 'Name it'}});
+  if(name === null) return;
+  if(!name){ say('Name cannot be empty'); return; }
+  saveCapsAsCard(name, clone(c.caps));
+}
+function saveCapsAsCard(name, caps){
+  return typeSeq(async () => {
+    const d0 = await (await fetch('/api/dsp/types')).json();
+    const t0 = (d0.types || []).find(t => t.name === UTYPE && !t.builtin);
+    const names = CARDS.map(c => c.name).concat(((t0 && t0.effects) || []).map(e => e.name));
+    if(names.includes(name)){ say('That name is taken'); return; }
+    const effects = ((t0 && t0.effects) || []).slice();
+    effects.push({id: 'u_' + Date.now().toString(36), name: name, kind: 'combo',
+                  enabled: true, desc: JSON.stringify(caps)});
+    await post('/api/dsp/types', {name: UTYPE, effects: effects});
+    curCard = name;
+    await loadUserCards();
+    renderAll();
+    say('Saved as effect');
+  }).catch(e => say('Save failed: ' + e.message));
+}
+// Delete custom card; remove the type too when it becomes empty 
+async function delUserCard(c){
+  const gone = c.user ? 'Gone for good: ' + c.name : 'Hidden, recoverable in edit mode: ' + c.name;
+  const yes = await sheet({title: 'Delete this card?', msg: gone, danger: true});
+  if(!yes) return;
+  return typeSeq(async () => {
+    const d = await (await fetch('/api/dsp/types')).json();
+    const t = (d.types || []).find(t => t.name === UTYPE && !t.builtin);
+    let effects = ((t && t.effects) || []).slice();
+    if(c.user) effects = effects.filter(e => e.id !== c.id);
+    else{
+      // Hide built-in: add the id to the hidden effect (customs untouched) 
+      let h = effects.find(e => e.id === 'hidden' && e.kind === 'hidden');
+      const ids = h ? JSON.parse(h.desc || '[]') : [];
+      if(!ids.includes(c.id)) ids.push(c.id);
+      const rec = {id: 'hidden', kind: 'hidden', enabled: false, desc: JSON.stringify(ids)};
+      if(h) h.desc = rec.desc; else effects.push(rec);
+    }
+    if(!effects.length) await post('/api/dsp/types/delete', {name: UTYPE});
+    else await post('/api/dsp/types', {name: UTYPE, effects: effects});
+    if(curCard === c.name) curCard = '';
+    await loadUserCards();
+    renderAll();
+    say('Deleted');
+  }).catch(e => say('Delete failed: ' + e.message));
+}
+
+function rngHtml(cap, f){
+  const v = S[cap.k][f.k];
+  return '<div class="fld"><div class="lab"><span>' + f.label + '</span><b>' +
+    v + (f.unit||'') + '</b></div>' +
+    '<input type="range" data-cap="' + cap.k + '" data-fld="' + f.k +
+    '" data-unit="' + (f.unit||'') + '" min="' + f.min +
+    '" max="' + f.max + '" step="' + f.step + '" value="' + v + '"></div>';
+}
+function segHtml(cap, f){
+  let h = '<div class="fld"><div class="lab"><span>' + f.label + '</span></div><div class="seg">';
+  for(const [val, label] of f.opts){
+    h += '<button data-cap="' + cap.k + '" data-fld="' + f.k + '" data-val="' + val + '"' +
+         (String(S[cap.k][f.k]) === String(val) ? ' class="on"' : '') + '>' + label + '</button>';
+  }
+  return h + '</div></div>';
+}
+function eqHtml(){
+  let h = '<div class="mini">' + (S.eq.bands.length ? ('Total ' + S.eq.bands.length + ' bands') : 'No bands yet') + '</div>';
+  if(S.eq.bands.length)
+    h += '<div class="ehd"><span>Freq Hz</span><span>Gain dB</span><span>Q</span><span></span></div>';
+  S.eq.bands.forEach((b, i) => {
+    h += '<div class="band">' +
+      '<input type="number" data-eq="' + i + '" data-f="freq" value="' + b.freq + '" step="1" title="Frequency in Hz">' +
+      '<input type="number" data-eq="' + i + '" data-f="gain_db" value="' + b.gain_db + '" step="0.5" title="Gain in dB">' +
+      '<input type="number" data-eq="' + i + '" data-f="q" value="' + b.q + '" step="0.05" title="Q">' +
+      '<button class="x" data-eqdel="' + i + '">✕</button></div>';
+  });
+  return h + '<div class="seg"><button id="eqadd">Add a band</button></div>';
+}
+function resHtml(cap){
+  if(cap.res === 'ir')
+    return '<div class="mini">Current: <b>' + (S.ir.name || 'Not loaded') + '</b>' +
+      '<div class="seg"><button id="irpick">Choose a file…</button>' +
+      (S.ir.name ? '<button id="irclr">Clear</button>' : '') + '</div>' +
+      '<input type="file" id="irfile" accept=".wav,.irs" style="display:none"></div>';
+  return '<div class="mini">Current: <b>' + (S.ddc.name ? (S.ddc.name + ' · ' + S.ddc.sections + ' bands') : 'Not loaded') +
+    '</b><div class="seg"><a href="' + cap.link + '" style="flex:1;min-height:40px;border-radius:9px;' +
+    'border:1px solid var(--line);background:var(--panel2);color:var(--fg2);display:flex;' +
+    'align-items:center;justify-content:center;text-decoration:none;font-size:13.5px">Pick your headphone model…</a>' +
+    (S.ddc.name ? '<button id="ddcclr">Clear</button>' : '') + '</div></div>';
+}
+
+const MODE_CN = {natural:'Natural', ozone:'Ozone', xhifi:'XHiFi'};
+const AX_CN = ['Light','Medium','Strong'];
+const LIM_CN = {feedback:'Feedback', truepeak:'True peak'};
+// what the board reads back carries hardware quantisation noise (rel_ms 56.88368039659528, gear 0.6000000000000001),
+// drawing that on the UI is just a string of garbage numbers: the display layer always rounds to at most one decimal.
+const fmt = x => {
+  const n = Math.round(+x * 10) / 10;
+  if(!isFinite(n)) return String(x);
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+};
+function sumOf(cap){
+  const v = S[cap.k];
+  switch(cap.k){
+    case 'viperbass': return (v.mode ? 'Pure Bass+' : 'Natural') + ' · ' + fmt(v.cutoff_hz) + ' Hz · ' + fmt(v.gain);
+    case 'dynamic_bass': return 'Strength ' + fmt(v.bass);
+    case 'dyn_bass': return 'Boost ' + fmt(v.gain_db) + ' dB · ref ' + fmt(v.ref_db) + ' dB · release ' + fmt(v.rel_ms) + ' ms';
+    case 'clarity': return (MODE_CN[v.mode] || v.mode) + ' · ' + fmt(v.level);
+    case 'vse': return 'Gear ' + fmt(v.gear);
+    case 'analogx': return AX_CN[v.model] || v.model;
+    case 'crossfeed': return fmt(v.fcut_hz) + ' Hz · feed ' + fmt(v.feed);
+    case 'surround': return fmt(v.delay_ms) + ' ms';
+    case 'colorfulmusic': return 'Widening ' + fmt(v.widening) + ' · depth ' + fmt(v.depth) + ' · centre ' + fmt(v.mid_image);
+    case 'loudness': return 'Strength ' + fmt(v.strength) + ' · offset ' + fmt(v.offset_db) + ' dB';
+    case 'limiter': return (LIM_CN[v.mode] || v.mode) + ' · ' + fmt(v.thr_db) + ' dB · release ' + fmt(v.rel_ms) + ' ms';
+    case 'gain': return (v.on && +v.gain_db > 0) ? ('+' + fmt(v.gain_db) + ' dB') : '';
+    case 'eq': return v.bands.length ? (v.bands.length + ' bands') : 'Not set';
+    case 'ir': return v.name || 'Not loaded';
+    case 'ddc': return v.name ? (v.name + ' · ' + v.sections + ' bands') : 'Not loaded';
+    default: return '';   // a capability with no parameters: leave the value column empty instead of drawing placeholder text on the screen
+  }
+}
+
+// What these consume follows **what the user is editing** (the band count), while per_effect reports what is
+// **on the board at this moment** — using it for the badge would lag one edit behind. So these keep being computed locally.
+const BUDGET_SKIP = {eq:1, ddc:1, loudness:1};
+// The id used to look up per_effect **must carry the mode suffix** (clarity_xhifi / viperbass_pbp).
+// How many slots a mode takes really does differ: Clarity NATURAL/OZONE are 1 slot each, XHIFI is 8;
+// ViPERBass NATURAL is 2 slots, PURE_BASS_PLUS is 4. Looking up a single default would mislead,
+// and the panel used to hard-code clarity at 1 slot with a special case for XHIFI at 8 — exactly that trap.
+function budgetSlots(cap){
+  if(BUDGET_SKIP[cap.k]) return null;
+  let id = cap.k;
+  if(cap.k === 'clarity' && S.clarity.mode) id = 'clarity_' + S.clarity.mode;
+  else if(cap.k === 'viperbass' && +S.viperbass.mode === 1) id = 'viperbass_pbp';
+  const n = BUDGET.per[id];
+  return (typeof n === 'number' && n > 0) ? n : null;
+}
+// The slot badge shows the **real current usage** (not a range or a score): prefer what the backend reports (0.3 §4.1),
+// and only fall back to the panel's own cost table when the lookup misses (the case on a backend with no budget endpoint).
+// ⚠️ this only **reports the facts**: going over the limit never drops anything automatically (every change has to be the user's own click).
+function costOf(cap){
+  const b = budgetSlots(cap);
+  if(b !== null) return b + ' slots';
+  if(cap.k === 'clarity') return (S.clarity.mode === 'xhifi' ? '8' : '1') + ' slots';
+  if(cap.k === 'eq'){ const n = Math.ceil((S.eq.bands.length || 0) / 3); return n + ' slots'; }
+  if(cap.k === 'ddc'){ const n = S.ddc.sections ? Math.ceil(S.ddc.sections / 3) : 0; return n + ' slots'; }
+  return cap.cost;
+}
+// the **single** algorithm for the total at the top: same source as the per-row badges (costOf), parsing strings like '2 slots'.
+// it used to accept only typeof cost === 'number', so every string-shaped cost was dropped ⇒ the top always said "about 4 slots",
+// and judging capacity by that is guaranteed to be wrong (ClearPenguin really uses 6, Clear vocals really uses 9).
+function slotsUsed(){
+  let n = 0;
+  for(const c of CAPS){
+    if(!S[c.k].on) continue;
+    const m = String(costOf(c)).match(/\d+/);
+    if(m) n += +m[0];
+  }
+  return n;
+}
+
+function renderCaps(){
+  const box = $('caps'); box.innerHTML = '';
+  for(const cap of CAPS){
+    const st = S[cap.k];
+    const el = document.createElement('div');
+    el.className = 'cap' + (st.on ? ' on' : '');
+    const head = document.createElement('div');
+    head.className = 'hd';
+    head.dataset.hd = cap.k;
+    const cs = String(costOf(cap));   // the badge uses the same costOf as the top: it used to read cap.cost directly,
+                                      // which painted the literal "n/3 slots" on device correction (pure garbage)
+    const badge = (cs && cs !== '0') ? '<span class="cost">' + cs + '</span>' : '';
+    // Capabilities with no tunable params (tube warmth / speaker correction): **no body**, rows do not expand, no chevron 
+    const hasBody = cap.eq || cap.res || (cap.fields && cap.fields.length);
+    head.innerHTML = '<div class="nm">' + cap.name + '</div>' +
+      (hasBody ? '<span class="chev">▼</span>' : '') +
+      '<div class="sum">' + sumOf(cap) + '</div>' +
+      '<div class="rt">' + badge +
+      '<button class="sw' + (st.on ? ' on' : '') + '" data-sw="' + cap.k + '"></button></div>';
+    el.appendChild(head);
+    if(!hasBody){ box.appendChild(el); continue; }
+    const body = document.createElement('div');
+    body.className = 'body';
+    if(cap.eq) body.innerHTML = eqHtml();
+    else if(cap.res) body.innerHTML = resHtml(cap);
+    else {
+      let h = '';
+      for(const f of cap.fields) h += (f.t === 'seg' ? segHtml(cap, f) : rngHtml(cap, f));
+      if(cap.note) h += '<div class="mini">' + cap.note + '</div>';
+      if(cap.protect) h += '<div class="mini">Protection level: it belongs to no sound card, and picking a card never changes it.</div>';
+      body.innerHTML = h;
+    }
+    el.appendChild(body);
+    box.appendChild(el);
+  }
+}
+
+function renderTop(){
+  $('cur').textContent = curCard || 'Custom';
+  const n = slotsUsed();
+  $('slots').textContent = 'about ' + n + ' / ' + BUDGET.limit + ' slots';
+  // Over the limit only turns it red — never drop anything automatically (the user has to pick what goes)
+  $('slots').className = 'slots' + (n > BUDGET.limit ? ' over' : '');
+}
+function renderAll(){ renderCards(); renderCaps(); renderTop(); }
+
+/* ── Events (event delegation) ── */
+document.addEventListener('input', e => {
+  const t = e.target;
+  if(t.dataset.cap && t.dataset.fld){
+    S[t.dataset.cap][t.dataset.fld] = parseFloat(t.value);
+    if(t.dataset.cap === 'gain') setGain(t.value);
+    // take the unit from the field definition (it used to guess from whether the label contained "delay" ⇒ every other slider lost its unit on first drag)
+    const lab = t.parentElement.querySelector('.lab b');
+    if(lab) lab.textContent = t.value + (t.dataset.unit || '');
+    curCard = ''; renderTop(); schedule(); return;
+  }
+  // ⚠️ the EQ number boxes do not send from here: half-typed (empty or partially typed) parseFloat yields 0,
+  // and 0 Hz is immediately scheduled to the board (which clamps it back to 20) — that is where "my change did nothing / it jumps around" came from.
+  // collect on change (blur / Enter) instead; see the change listener below.
+});
+document.addEventListener('click', e => {
+  const hd = e.target.closest('[data-hd]');
+  if(hd && !e.target.closest('[data-sw]')){ hd.parentElement.classList.toggle('open'); return; }
+  const sw = e.target.closest('[data-sw]');
+  if(sw){ const k = sw.dataset.sw; S[k].on = !S[k].on; curCard=''; renderAll(); schedule(); return; }
+  const sg = e.target.closest('.seg button[data-cap]');
+  if(sg){
+    const k = sg.dataset.cap, f = sg.dataset.fld, v = sg.dataset.val;
+    S[k][f] = /^-?\d+(\.\d+)?$/.test(v) ? parseFloat(v) : v;
+    curCard=''; renderAll(); schedule(); return;
+  }
+  if(e.target.id === 'eqadd'){ S.eq.bands.push({type:'peq', freq:1000, gain_db:0, q:1}); curCard=''; renderAll(); schedule(); return; }
+  const del = e.target.closest('[data-eqdel]');
+  if(del){ S.eq.bands.splice(+del.dataset.eqdel, 1); curCard=''; renderAll(); schedule(); return; }
+  if(e.target.id === 'irpick'){ $('irfile').click(); return; }
+  if(e.target.id === 'bkSave'){ downloadBackup(); return; }
+  if(e.target.id === 'bkRestore'){ $('bkfile').click(); return; }
+  if(e.target.id === 'irclr'){ post('/api/dsp/ir?off=1').then(refresh); return; }
+  if(e.target.id === 'ddcclr'){ post('/api/dsp/ddc?off=1').then(refresh); return; }
+});
+document.addEventListener('change', e => {
+  const t = e.target;
+  if(t.dataset.eq !== undefined){
+    const i = +t.dataset.eq, f = t.dataset.f;
+    const x = parseFloat(t.value);
+    if(!isFinite(x)){ renderAll(); return; }   // drop the half-typed input and fall back to the old value
+    let v = x;
+    if(f === 'freq') v = Math.min(hwMaxFreq, Math.max(hwMinFreq, v));   // clamp to the range the board reports for itself. 
+    if(f === 'q' && v <= 0) v = 0.1;
+    S.eq.bands[i][f] = v;
+    curCard = ''; renderAll(); schedule(); return;
+  }
+  if(t.id === 'irfile' && t.files[0]) uploadIR(t.files[0]);
+  if(t.id === 'bkfile' && t.files[0]){ uploadBackup(t.files[0]); t.value = ''; }
+});
+// Backup: download the whole package (filename comes from the backend Content-Disposition). 
+async function downloadBackup(){
+  try{
+    const r = await fetch('/api/dsp/backup');
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const blob = await r.blob();
+    let name = 'zybo-backup.json';
+    const cd = r.headers.get('Content-Disposition') || '';
+    const fn = cd.split('filename=')[1];
+    if(fn) name = fn.split('"').join('').split(';')[0].trim() || name;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+    say('Backup download started');
+  }catch(e){ say('Backup failed: ' + e.message); }
+}
+// Restore: confirm first (overwrites custom cards, presets and chain settings), then upload the package. 
+async function uploadBackup(f){
+  const yes = await sheet({title: 'Restore from backup?', msg: 'This overwrites custom cards, presets and chain settings'});
+  if(!yes) return;
+  try{
+    const text = await f.text();
+    await post('/api/dsp/restore', text, true);
+    say('Backup restored');
+    tick();
+  }catch(e){ say('Restore failed: ' + e.message); }
+}
+
+/* ── Sending ── */
+async function post(path, body, raw, method){
+  const opt = {method: method || 'POST'};
+  if(body !== undefined){ opt.body = raw ? body : JSON.stringify(body);
+    opt.headers = {'Content-Type': raw ? 'application/octet-stream' : 'application/json'}; }
+  const r = await fetch(path, opt);
+  let d = null; try{ d = await r.json() }catch(err){}
+  if(!r.ok){
+    // hang the whole response body off the error: a capacity error carries code/what/needed/limit (0.3 §4.2),
+    // and those are the fields capMsg wants — message stays the plain sentence, for the other call sites.
+    const e = new Error((d && d.error) ? d.error : ('HTTP ' + r.status));
+    e.detail = d;
+    throw e;
+  }
+  return d;
+}
+function schedule(){ if(timer) clearTimeout(timer); timer = setTimeout(push, 300); }
+
+function buildChain(){
+  // type only updates the recorded name when non-empty (the backend assigns only when req.Type != ""): carry the current card name / Custom,
+  // so the name in the board's saved state matches the panel; an empty string is ignored by the backend (neither updated nor cleared).
+  const body = {chain: [], preamp_db: 0, type: curCard || 'Custom'};
+  // gain_db is **always carried**, same semantics as every other field: the backend takes a *float64 (absent = keep the old value), and before every
+  // push the UI has just refreshed and is in step (local == board), so always carrying it cannot "expire and clobber"; on the other hand a "carry only
+  // sometimes" path left the two out of step — on a send that omitted it, a backend that fell back to the old reading (non-pointer, absent field = 0) would wipe the gain the user set
+  // back to 0, which sounds like "the volume keeps dropping every time I switch" (been there, no more conditions).
+  body.gain_db = S.gain.on ? +S.gain.gain_db : 0;
+  if(S.eq.on) for(const b of S.eq.bands)
+    body.chain.push({type:'peq', enabled:true, freq:+b.freq, gain_db:+b.gain_db, q:+b.q});
+  for(const cap of CAPS){
+    if(!cap.api || cap.eq || cap.res || cap.sep) continue;
+    const st = S[cap.k];
+    if(!st.on){ body[cap.api] = {off:true}; continue; }
+    const p = {};
+    for(const k of Object.keys(st)) if(k !== 'on' && k !== 'coeffs' && k !== 'bands') p[k] = st[k];
+    if(cap.k === 'dynamic_bass') p.coeffs = st.coeffs;
+    body[cap.api] = p;
+  }
+  return body;
+}
+
+async function push(){
+  const body = buildChain();
+  // catch the obviously fatal overflow locally first (EQ bands + device correction sections > the band count the hardware reports): the backend also answers exactly with
+  // 400, but that error lists the whole chain band by band, and dumped into the status line it is a screen of noise. Other capabilities also consume sections,
+  // and those are still the backend's business (the budget endpoint is a separate matter); here we only catch the fatal case and do not guess the budget.
+  const ddcN = S.ddc.on ? (+S.ddc.sections || 0) : 0;
+  const need = body.chain.length + ddcN;
+  if(need > hwBands){
+    say('Blocked before sending: EQ ' + body.chain.length + ' bands + device correction ' + ddcN +
+        ' bands = ' + need + ' bands, hardware has only ' + hwBands + ' bands — switch off a few EQ or device-correction bands first', 'e');
+    return;
+  }
+  const warns = [];
+  try{
+    // ⚠️ /api/dsp/chain only accepts GET / PUT (a POST is rejected: "only GET / PUT supported")
+    const d = await post('/api/dsp/chain', body, false, 'PUT');
+    try{
+      await post('/api/dsp/limiter', S.limiter.on
+        ? {enabled:true, mode:S.limiter.mode, thr_db:S.limiter.thr_db, rel_ms:S.limiter.rel_ms}
+        : {enabled:false});
+    }catch(e){ warns.push('Limiter setting failed: ' + e.message); }
+    try{
+      await post('/api/dsp/loudness', S.loudness.on
+        ? {enabled:true, strength:S.loudness.strength, offset_db:S.loudness.offset_db}
+        : {enabled:false});
+    }catch(e){ warns.push('Loudness setting failed: ' + e.message); }
+    // the status line only says whether it is in effect now: while bypassing the whole chain does not run at all (in dsp_engine.v
+    // `out_data = use_dsp ? mem[rd] : in_data`, and `start` is gated by use_dsp too),
+    // so writing "N bands in effect / X dB of headroom" here would be a lie — this line is the only place in the UI that claims something is in effect.
+    let m = ($('master').classList.contains('on') ? 'Applied' : 'Saved · bypassing');
+    if(d && d.applied != null) m += ' · ' + d.applied + ' bands';
+    if(warns.length) say(m + '（' + warns.join('；') + '）', 'e');
+    else say(m, 'k');
+    refresh();
+  }catch(err){ say(capMsg(err.detail) || ('Send failed: ' + err.message), 'e'); }
+}
+
+async function uploadIR(file){
+  try{
+    const buf = await file.arrayBuffer();
+    await post('/api/dsp/ir?name=' + encodeURIComponent(file.name), buf, true);
+    S.ir.name = file.name; S.ir.on = true; renderAll(); say('Convolution loaded: ' + file.name, 'k'); refresh();
+  }catch(err){ say('Convolution load failed: ' + err.message, 'e'); }
+}
+
+/* ── Staying in step with the board ──
+   This used to paint the UI once: S stayed whatever was in memory, so a refresh went back to the defaults (not one card lit, every value default) while the board kept running your last settings. Now every refresh **reads the current chain back from the board** (the per-capability views in `/api/dsp/chain` are their current values), lays it over S and repaints;
+   the name of the card that matches is derived from the same data. */
+function sameVal(a, b){
+  if(typeof a === 'number' && typeof b === 'number') return Math.abs(a - b) < 1e-6;
+  return a === b;
+}
+function sameBands(a, b){
+  if(!a || !b || a.length !== b.length) return false;
+  for(let i = 0; i < a.length; i++){
+    // ⚠️ compare frequencies by **what the board clamped them to**: the backend clamps each band into [hwMinFreq, hwMaxFreq]
+    // (self-reported by capabilities, 20..20000 on this unit) — a literal compare would call a card you just tapped "custom",
+    // and the card would not light up. 
+    let f = +b[i].freq;
+    if(f < hwMinFreq) f = hwMinFreq;
+    if(f > hwMaxFreq) f = hwMaxFreq;
+    if(!sameVal(+a[i].freq, f) || !sameVal(+a[i].gain_db, +b[i].gain_db) ||
+       !sameVal(+a[i].q, +b[i].q)) return false;
+  }
+  return true;
+}
+// which card is hit now: every capability's on/off must match, and so must every value the card writes —
+// anything off means "Custom" (the user changed something below). The limiter, convolution and device correction are independent
+// things that belong to no sound card, so they take no part in the decision. 
+function matchCard(){
+  const shown = CARDS.filter(c => !hiddenIds.includes(c.id));
+  for(const c of shown.concat(userCards)){
+    let hit = true;
+    for(const k of Object.keys(S)){
+      if(k === 'limiter' || k === 'ir' || k === 'ddc' || k === 'gain') continue;
+      const want = c.caps[k];
+      if(k === 'eq'){
+        if(!!S.eq.on !== !!want){ hit = false; break; }
+        if(want && !sameBands(S.eq.bands, want.bands)){ hit = false; break; }
+        continue;
+      }
+      if(!!S[k].on !== !!want){ hit = false; break; }
+      if(!want) continue;
+      for(const f of Object.keys(want)){
+        if(f === 'on' || f === 'bands' || S[k][f] === undefined) continue;
+        if(!sameVal(S[k][f], want[f])){ hit = false; break; }
+      }
+      if(!hit) break;
+    }
+    if(hit) return c.name;
+  }
+  return '';
+}
+async function refresh(){
+  try{
+    const c = await (await fetch('/api/dsp/capabilities')).json();
+    if(c.min_freq_hz) hwMinFreq = +c.min_freq_hz;
+    if(c.max_freq_hz) hwMaxFreq = +c.max_freq_hz;
+    if(c.bands) hwBands = +c.bands;
+    const d = await (await fetch('/api/dsp/ddc')).json();
+    S.ddc.name = d.name || ''; S.ddc.sections = d.sections || 0; S.ddc.on = !!d.name;
+    // Convolution: **read back** /api/dsp/ir, exactly as we do for DDC. 
+    // NOTE: this used to read `c.fir.loaded` from capabilities, but the backend fir map only has 
+    //    {available, taps, coef_base} -- there is **no `loaded` key at all**, so it was never true. 
+    //    Two consequences, and neither is "the styling is off" -- **the UI is lying**: 
+    //      · the IR is audibly in the chain (in_chain=true) while this row said "not loaded"; 
+    //      · slotsUsed() only sums entries whose S[c.k].on is true, so the IR slot was left out, 
+    //        one less than the backend self-report via /api/dsp/budget (measured 12 vs 13). 
+    //    and slotsUsed() is documented above as sharing its source with the row badges. 
+    const ri = await (await fetch('/api/dsp/ir')).json();
+    S.ir.name = ri.name || ''; S.ir.on = !!ri.in_chain;
+
+    // Slot budget: let the backend report it (0.3 §4.1). **If it cannot be read, leave the whole block alone** (BUDGET keeps its initial value) —
+    // a failure here must never take the whole UI down with it: the badge falls back to the panel's own cost table and everything else keeps working.
+    try{
+      const bg = await (await fetch('/api/dsp/budget')).json();
+      if(bg && typeof bg.limit === 'number' && bg.limit > 0){
+        BUDGET.limit = bg.limit;
+        BUDGET.used = (typeof bg.used === 'number') ? bg.used : null;
+        const per = {};
+        for(const e of (bg.per_effect || [])) if(e && e.id) per[e.id] = e.slots;
+        BUDGET.per = per;
+      }
+    }catch(e){}
+
+    // what the board is really sending right now — the single source of truth; the UI shows that
+    const ch = await (await fetch('/api/dsp/chain')).json();
+    S.eq.bands = (ch.chain || []).map(b => ({type: b.type || 'peq', enabled: b.enabled !== false,
+                                             freq: +b.freq, gain_db: +b.gain_db, q: +b.q}));
+    S.eq.on = S.eq.bands.length > 0;
+    for(const cap of CAPS){
+      if(!cap.api || cap.eq || cap.res) continue;
+      const v = ch[cap.api], st = S[cap.k];
+      // the board does not report this one (e.g. the backend predates the limiter/loudness views) ⇒ **keep the current value**,
+      // never read it as "this one is off": that would let the next send quietly turn the limiter off.
+      if(v === undefined) continue;
+      st.on = !!v && v.on !== false;                 // an empty view means this one is off. 
+      if(!v) continue;
+      // round the values before they enter the UI: hardware reads back carry quantisation noise (rel_ms 56.88368039659528,
+      // gear 0.6000000000000001); writing them straight in shows a string of garbage and drifts on every write/read round trip.
+      for(const k of Object.keys(st)){
+        if(k === 'on' || v[k] === undefined) continue;
+        st[k] = (typeof v[k] === 'number') ? Math.round(v[k] * 10) / 10 : v[k];
+      }
+    }
+    if(typeof ch.gain_db === 'number'){ gainFromBoard = true; setGain(ch.gain_db); }
+    else if(S.gain.on && +S.gain.gain_db > 0 && !gainPushedOnce){
+      // the board (old backend) does not report overall gain: send our stored copy once so the UI and the board do not diverge
+      gainPushedOnce = true; schedule();
+    }
+    // Load custom cards first so matchCard can tell "this is a custom card" 
+    await loadUserCards();
+    curCard = matchCard();
+    renderAll();
+    boardOK = true;
+  }catch(e){
+    // do not fail silently when the board is unreachable: warn only on the transition from readable to unreadable, and stay quiet once it recovers
+    if(boardOK){ say('Cannot reach the board (offline?)', 'e'); boardOK = false; }
+  }
+}
+
+/* ── Now playing / source / volume / bypass ── */
+const SRCS = [['idle', '🛑 Stop'], ['airplay', '📱 AirPlay'], ['dlna', '🏠 DLNA'], ['bluetooth', '🎧 Bluetooth']];
+let curSrc = '';
+function renderSrcs(){
+  const box = $('srcs'); box.innerHTML = '';
+  for(const [v, label] of SRCS){
+    const b = document.createElement('button');
+    b.dataset.src = v; b.textContent = label;
+    if(v === curSrc) b.className = 'on';
+    box.appendChild(b);
+  }
+}
+async function tick(){
+  let st;
+  try{ st = await (await fetch('/api/status')).json(); }catch(e){ return; }
+  $('npTitle').textContent = st.playing ? (st.title || 'Playing…') : 'Not playing';
+  $('npDot').classList.toggle('live', !!st.playing);
+  $('npSub').textContent = st.artist || (st.source ? (st.album || '') : 'Cast to ZYBO Audio from your phone');
+  $('npSrc').textContent = st.source || 'Idle';
+  if(st.source !== curSrc){ curSrc = st.source || ''; renderSrcs(); }
+  if(document.activeElement !== $('vol')) $('vol').value = st.volume;
+  $('volTxt').textContent = st.volume + '%';
+  const byp = !!(st.dsp && st.dsp.bypass);
+  $('master').classList.toggle('on', !byp);
+  $('masterTxt').textContent = byp ? 'Off (bypass)' : 'On';
+}
+$('srcs').addEventListener('click', e => {
+  const b = e.target.closest('[data-src]'); if(!b) return;
+  post('/api/source/select', {source: b.dataset.src}).then(tick).catch(
+    err => say('Could not switch source: ' + err.message, 'e'));
+});
+$('vol').addEventListener('input', () => { $('volTxt').textContent = $('vol').value + '%'; });
+$('vol').addEventListener('change', () => {
+  post('/api/volume', {volume: +$('vol').value}).then(tick).catch(
+    err => say('Volume setting failed: ' + err.message, 'e'));
+});
+// master switch for the sounds: **off means bypass** (same as the bypass flag), so there is no separate bypass control
+$('master').addEventListener('click', () => {
+  const on = !$('master').classList.contains('on');   // on = effects in effect
+  $('master').classList.toggle('on', on);              // flip the visual first; on failure tick puts it back from the board's real state
+  post('/api/dsp/bypass', {bypass: !on}).then(tick).catch(err => {
+    say('Bypass switch did not take effect: ' + err.message, 'e'); tick();
+  });
+});
+$('cardSave').addEventListener('click', saveUserCard);
+$('cardEdit').addEventListener('click', () => {
+  manage = !manage;
+  $('cardEdit').textContent = manage ? 'Done' : 'Edit';
+  $('cardEdit').classList.toggle('on', manage);
+  renderCards();
+});
+renderSrcs(); tick(); setInterval(tick, 3000);
+
+renderAll();
+refresh();
+</script>
+</body>
+</html>

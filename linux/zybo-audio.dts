@@ -1,0 +1,100 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// ============================================================================
+// zybo-audio.dts — ZYBO Rev B audio system device tree (V6: PL330 + simple-audio-card)
+// ============================================================================
+// Based on the mainline binding adi,axi-i2s.txt and a working configuration:
+//   (axi_i2s_adi + PS PL330(&dmac_s) + ssm2603 + simple-audio-card)
+// Used as the Buildroot custom kernel DTS (BR2_LINUX_KERNEL_CUSTOM_DTS_PATH):
+// it layers the audio PL peripherals on top of the zynq-zybo.dts (PS peripherals)
+// shipped with linux-xlnx 6.6.
+//
+// Hardware / block design mapping:
+//   axi_gpio  @0x4120_0000   4-bit push-button input
+//   axi_iic   @0x4160_0000   PL I2C -> SSM2603 @0x1A
+//   axi_i2s   @0x43C0_0000   Digilent axi_i2s_adi:1.2 (PL330 mode, compatible with adi,axi-i2s-1.00.a)
+//   DMA       PS built-in PL330 (&dmac_s): tx=ch0, rx=ch1
+//   clk_wiz   12.288MHz (48k*256) -> I2S DATA_CLK_I + AC_MCLK
+//
+// Board check: the i2c interrupt number (IRQ_F2P[0] = SPI 29); keep the two in
+// sync if the block design changes.
+// ============================================================================
+/dts-v1/;
+#include "xilinx/zynq-zybo.dts"
+
+/ {
+    audio_ref_clk: audio_ref_clk {
+        compatible = "fixed-clock";
+        #clock-cells = <0>;
+        clock-frequency = <12288000>;   /* 48kHz * 256 */
+    };
+
+    sound {
+        compatible = "simple-audio-card";
+        simple-audio-card,name = "Zybo-Sound-Card";
+        simple-audio-card,format = "i2s";
+        simple-audio-card,bitclock-master = <&cpu_dai>;
+        simple-audio-card,frame-master = <&cpu_dai>;
+
+        cpu_dai: simple-audio-card,cpu {
+            sound-dai = <&axi_i2s_0>;
+            clocks = <&audio_ref_clk>;
+        };
+
+        simple-audio-card,codec {
+            sound-dai = <&ssm2603>;
+            clocks = <&audio_ref_clk>;
+        };
+    };
+};
+
+/* PL peripherals hang directly off the root node (6.6's zynq-zybo.dts has no amba_pl container) */
+/ {
+    axi_i2s_0: i2s@43c00000 {
+        #sound-dai-cells = <0>;
+        compatible = "adi,axi-i2s-1.00.a";
+        reg = <0x43c00000 0x1000>;
+        clock-names = "axi", "ref";
+        clocks = <&clkc 15>, <&audio_ref_clk>;
+        dmas = <&dmac_s 0>, <&dmac_s 1>;
+        dma-names = "tx", "rx";
+    };
+
+    axi_iic_0: i2c@41600000 {             /* PL I2C -> codec (NOT the PS I2C) */
+        compatible = "xlnx,xps-iic-2.00.a";
+        reg = <0x41600000 0x10000>;
+        /* interrupt-parent must be set explicitly: zynq-7000.dtsi sets
+         * interrupt-parent=<&intc> only on the amba node, not on the root node.
+         * When a PL node hangs off the root node, of_irq_find_parent() cannot walk
+         * up to find it, platform_get_irq() returns -ENXIO and the xiic-i2c probe
+         * fails (no I2C adapter -> codec never probes -> simple-audio-card stays
+         * in deferred probe, "No soundcards found").
+         * DT SPI numbers are relative to the GIC SPI base of 32: 29 + 32 = 61 = IRQ_F2P[0]. */
+        interrupt-parent = <&intc>;
+        interrupts = <0 29 4>;            /* IRQ_F2P[0] */
+        /* xiic-i2c calls devm_clk_get_enabled(dev, NULL), which takes the first
+         * clock (= S_AXI_ACLK = FCLK_CLK0 100MHz); the probe fails without it:
+         *   "error -ENOENT: failed to enable input clock."
+         * That clock also sets the SCL divider (clk_get_rate is the input_clk). */
+        clocks = <&clkc 15>;              /* FCLK_CLK0 = 100MHz */
+        #address-cells = <1>;
+        #size-cells = <0>;
+        clock-frequency = <100000>;
+
+        ssm2603: ssm2603@1a {
+            #sound-dai-cells = <0>;
+            compatible = "adi,ssm2603";
+            reg = <0x1a>;
+        };
+    };
+
+    axi_gpio_btn: gpio@41200000 {
+        compatible = "xlnx,xps-gpio-1.00.a";
+        reg = <0x41200000 0x10000>;
+        gpio-controller;
+        #gpio-cells = <2>;
+    };
+};
+
+// Note: zynq-zybo.dts ships official base peripheral nodes under amba_pl
+// (timer/hdmi etc.) that do not exist in this hardware; /delete-node/ them as
+// needed if the probe noise is significant.

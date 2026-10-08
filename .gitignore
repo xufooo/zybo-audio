@@ -1,0 +1,23 @@
+# Vivado outputs — reproducible, never committed
+build/
+.Xil/
+*.bit
+*.xsa
+*.runs/
+*.cache/
+*.hw/
+*.jou
+*.log
+xsim.dir/
+*.pb
+# Go build output
+zybo-audio-web
+# Python caches
+__pycache__/
+# Node modules (CI installs from lockfile)
+node_modules/
+# Local notes and user data (never enter git)
+NA/
+*.irs
+*.vdc
+*.json.bak

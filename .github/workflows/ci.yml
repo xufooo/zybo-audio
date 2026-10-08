@@ -1,0 +1,43 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+      - run: gofmt -l . | tee /tmp/fmt.out && test ! -s /tmp/fmt.out
+      - run: go vet ./...
+      - run: go test ./...
+      - name: cross-compile for ZYBO (ARMv7 static)
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -trimpath -o /tmp/zybo-audio-web .
+
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Repository gates
+        run: bash tools/gates.sh
+
+  webui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci --prefix tools/webui-check
+      - name: Panel smoke (no built-in cards expected)
+        run: NODE_PATH=tools/webui-check/node_modules node tools/webui_smoke.js webui/index.html 0

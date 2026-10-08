@@ -1,0 +1,324 @@
+{
+  "album": "Fixture Album",
+  "artist": "Fixture Artist",
+  "dsp": {
+    "available": true,
+    "bands": [
+      {
+        "freq": 20,
+        "gain_db": 3.5,
+        "q": 0.7,
+        "type": "PK"
+      },
+      {
+        "freq": 42,
+        "gain_db": 0.5,
+        "q": 0.5,
+        "type": "PK"
+      },
+      {
+        "freq": 88.3,
+        "gain_db": 3.5,
+        "q": 0.5,
+        "type": "PK"
+      },
+      {
+        "freq": 185.7,
+        "gain_db": 2.5,
+        "q": 0.5,
+        "type": "PK"
+      },
+      {
+        "freq": 390.2,
+        "gain_db": -1,
+        "q": 0.5,
+        "type": "PK"
+      },
+      {
+        "freq": 820.1,
+        "gain_db": -1,
+        "q": 1.4,
+        "type": "PK"
+      },
+      {
+        "freq": 1723.5,
+        "gain_db": 1,
+        "q": 0.5,
+        "type": "PK"
+      },
+      {
+        "freq": 3622.3,
+        "gain_db": 3,
+        "q": 0.5,
+        "type": "PK"
+      },
+      {
+        "freq": 7613,
+        "gain_db": 5,
+        "q": 0.7,
+        "type": "PK"
+      },
+      {
+        "freq": 16000,
+        "gain_db": 2.5,
+        "q": 0.7,
+        "type": "PK"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      },
+      {
+        "freq": 0,
+        "gain_db": 0,
+        "q": 0,
+        "type": "off"
+      }
+    ],
+    "bands_active": 10,
+    "bypass": false,
+    "enabled": true,
+    "lim_att_ms": 0.09335653525318562,
+    "lim_rel_ms": 56.88368039659528,
+    "lim_thr_db": -1,
+    "limiter": true,
+    "limiter_mode": "truepeak",
+    "preamp_db": 0,
+    "preset": "flat"
+  },
+  "playing": true,
+  "source": "airplay",
+  "sources": {
+    "airplay": true,
+    "bluetooth": true,
+    "dlna": false
+  },
+  "system": {
+    "cpu_percent": 19,
+    "mem_total_mb": 512,
+    "mem_used_mb": 75,
+    "uptime_sec": 966
+  },
+  "title": "Fixture Track",
+  "version": "0.3.0",
+  "volume": 90,
+  "volume_db": -6.0
+}

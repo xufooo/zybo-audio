@@ -1,0 +1,383 @@
+{
+  "analogx": {
+    "available": true,
+    "on": false,
+    "tiers": [
+      {
+        "gain": 0.6,
+        "lowpass_hz": 19650,
+        "model": 0,
+        "name_cn": "Slight",
+        "name_en": "slight",
+        "preset": "analogx-slight"
+      },
+      {
+        "gain": 1.2,
+        "lowpass_hz": 18233,
+        "model": 1,
+        "name_cn": "Moderate",
+        "name_en": "moderate",
+        "preset": "analogx-moderate"
+      },
+      {
+        "gain": 2.4,
+        "lowpass_hz": 16307,
+        "model": 2,
+        "name_cn": "Extreme",
+        "name_en": "extreme",
+        "preset": "analogx-extreme"
+      }
+    ],
+    "view": null
+  },
+  "bands": 48,
+  "clarity": {
+    "available": true,
+    "delay_slots": 24,
+    "level_range": [
+      0,
+      100
+    ],
+    "modes": [
+      "natural",
+      "ozone",
+      "xhifi"
+    ],
+    "on": false,
+    "unsupported": [],
+    "view": null,
+    "xhifi_slots": 2
+  },
+  "colorfulmusic": {
+    "available": true,
+    "client_depth_range": [
+      200,
+      800
+    ],
+    "client_midimage_range": [
+      100,
+      200
+    ],
+    "client_widening_range": [
+      120,
+      200
+    ],
+    "on": false,
+    "view": null
+  },
+  "crossfeed": {
+    "available": true,
+    "on": false,
+    "tiers": {
+      "crosscheck": "refs/jamesdsp-linux/resources/assets/default.conf:16-17 (700/60 verified bit-exact)",
+      "default_tier": 1,
+      "default_why": "This unit's default follows the owner's JamesDSP install config (700/60 = V4A Moderate), not V4A level 0",
+      "source": "refs/viperfx-re/src/viper/ViPER.cpp:370-401 (three level values)",
+      "source_names": "refs/viper4android_fx/android_4.x/res/values/arrays.xml:256-265 + values-zh-rCN/arrays.xml:98-102",
+      "tiers": [
+        {
+          "default": false,
+          "fcut_hz": 650,
+          "feed": 95,
+          "name_cn": "Slight",
+          "name_en": "Slight",
+          "tier": 0
+        },
+        {
+          "default": true,
+          "fcut_hz": 700,
+          "feed": 60,
+          "name_cn": "Moderate",
+          "name_en": "Moderate",
+          "tier": 1
+        },
+        {
+          "default": false,
+          "fcut_hz": 700,
+          "feed": 45,
+          "name_cn": "Extreme",
+          "name_en": "Extreme",
+          "tier": 2
+        }
+      ],
+      "v4a_default": 0
+    },
+    "view": null
+  },
+  "dsp_available": true,
+  "dyn_bass": {
+    "att_ms": 5,
+    "available": true,
+    "cut_db": 0,
+    "gain_db": 5,
+    "ks": 0.75,
+    "on": true,
+    "ref_db": -25,
+    "rel_ms": 200
+  },
+  "engine": "slot-table",
+  "engine_gen": 1,
+  "exciter": {
+    "available": true,
+    "on": false,
+    "view": null
+  },
+  "fir": {
+    "available": true,
+    "coef_base": 480,
+    "taps": 8192
+  },
+  "fx_presets": {
+    "note": "A2 four parameter preset groups (AnalogX three levels + VSE default gear). One-line apply: PUT /api/dsp/chain {\"fx_preset\":\"analogx-moderate\"}. They land on the existing analogx / exciter fields (persistence semantics unchanged). Turning off still uses each off field (analogx.off / vse.off).",
+    "on": [],
+    "presets": [
+      {
+        "cn": "Slight",
+        "fx": "analogx",
+        "harmonics": [
+          0.01,
+          0.02,
+          0.0001,
+          0.001,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "hpf_hz": 240,
+        "lpf_hz": 19650,
+        "name": "analogx-slight",
+        "source": "refs/viperfx-re/src/viper/effects/AnalogX.cpp:5-16 (harmonic table),:62-93 (three levels of gain/LPF),:53-57 (HP240/Peak633); level names refs/viper4android_fx/android_4.x/res/values/arrays.xml:266-274",
+        "wet_gain": 0.6
+      },
+      {
+        "cn": "Moderate",
+        "fx": "analogx",
+        "harmonics": [
+          0.01,
+          0.02,
+          0.0001,
+          0.001,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "hpf_hz": 240,
+        "lpf_hz": 18233,
+        "model": 1,
+        "name": "analogx-moderate",
+        "source": "refs/viperfx-re/src/viper/effects/AnalogX.cpp:5-16 (harmonic table),:62-93 (three levels of gain/LPF),:53-57 (HP240/Peak633); level names refs/viper4android_fx/android_4.x/res/values/arrays.xml:266-274",
+        "wet_gain": 1.2
+      },
+      {
+        "cn": "Extreme",
+        "fx": "analogx",
+        "harmonics": [
+          0.01,
+          0.02,
+          0.0001,
+          0.001,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "hpf_hz": 240,
+        "lpf_hz": 16307,
+        "model": 2,
+        "name": "analogx-extreme",
+        "source": "refs/viperfx-re/src/viper/effects/AnalogX.cpp:5-16 (harmonic table),:62-93 (three levels of gain/LPF),:53-57 (HP240/Peak633); level names refs/viper4android_fx/android_4.x/res/values/arrays.xml:266-274",
+        "wet_gain": 2.4
+      },
+      {
+        "cn": "VSE treble exciter (default gear)",
+        "fx": "vse",
+        "gear": 0.1,
+        "harmonics": [
+          0.02,
+          0,
+          0.02,
+          0,
+          0.02,
+          0,
+          0.02,
+          0,
+          0.02,
+          0
+        ],
+        "hpf_hz": 7600,
+        "lpf_hz": 22000,
+        "name": "vse",
+        "reconstruct": 56,
+        "source": "refs/viperfx-re/src/viper/effects/SpectrumExtend.cpp:4-15 (odd 0.02),:19 (refFreq 7600),:44-52 (HP=refFreq / LP=fs/2-2000); levels to core refs/viper4android_fx/android_4.x-5.x/src/com/vipercn/viper4android_v2/service/ViPER4AndroidService.java:1708-1710; default gear 0.1 refs/viper4android_fx/android_4.x/res/xml/headset_preferences_l2.xml:85-92",
+        "wet_gain": 0.56
+      }
+    ]
+  },
+  "hardware": {
+    "delay_log2": 13,
+    "delay_slots": 24,
+    "fir_max_log2": 9,
+    "headroom_available": true,
+    "headroom_db": 18,
+    "headroom_on": true,
+    "max_sections": 48,
+    "num_slots": 24,
+    "opcodes": 8187,
+    "overrun_count": 0,
+    "status": 1969408,
+    "version": 1
+  },
+  "limiter": {
+    "att_ms": 0.09334607119360103,
+    "available": true,
+    "bypass": false,
+    "mode": "truepeak",
+    "note": "feedback mode has no lookahead and produces waveform discontinuities on 0 dBFS material (~1770 per second); truepeak mode looks ahead 2 ms with log-domain smoothing, measured count is 0",
+    "rel_ms": 56.88368039659528,
+    "rel_ms_max": 341,
+    "truepeak_available": true
+  },
+  "max_freq_hz": 20000,
+  "min_freq_hz": 20,
+  "planned": {
+    "analog": "Tube warmth / even harmonics (P3)",
+    "compressor": "Compression (P2)",
+    "copy": "Channel matrix (P2)",
+    "delay": "Delay (P2)",
+    "limiter": "true-peak limiting (P2)",
+    "loudness": "Loudness compensation (P2)",
+    "reverb": "Reverb (P3)"
+  },
+  "presets": {
+    "builtin": 34,
+    "user": 0
+  },
+  "sample_rate": 48000,
+  "speaker_correction": {
+    "available": true,
+    "on": false,
+    "sections": 3,
+    "view": null
+  },
+  "surround": {
+    "available": true,
+    "on": false,
+    "view": null
+  },
+  "tube": {
+    "available": true,
+    "on": false,
+    "view": null
+  },
+  "types": [
+    "allpass",
+    "bandpass",
+    "fir",
+    "highpass",
+    "highshelf",
+    "lowpass",
+    "lowshelf",
+    "notch",
+    "peq"
+  ],
+  "viperbass": {
+    "available": true,
+    "cutoff_hz": [
+      30,
+      40,
+      50,
+      60,
+      66,
+      78,
+      80,
+      100
+    ],
+    "gain": [
+      50,
+      100,
+      150,
+      200,
+      250,
+      300,
+      350,
+      400,
+      450,
+      500,
+      550,
+      600
+    ],
+    "modes": [
+      "natural",
+      "pure_bass_plus",
+      "subwoofer"
+    ],
+    "on": false,
+    "pbp_available": true,
+    "view": null
+  },
+  "vse": {
+    "available": true,
+    "gears": [
+      {
+        "gear": 0.1,
+        "mix": 0.56,
+        "reconstruct": 56
+      },
+      {
+        "gear": 0.2,
+        "mix": 1.12,
+        "reconstruct": 112
+      },
+      {
+        "gear": 0.30000000000000004,
+        "mix": 1.68,
+        "reconstruct": 168
+      },
+      {
+        "gear": 0.4,
+        "mix": 2.24,
+        "reconstruct": 224
+      },
+      {
+        "gear": 0.5,
+        "mix": 2.8,
+        "reconstruct": 280
+      },
+      {
+        "gear": 0.6000000000000001,
+        "mix": 3.36,
+        "reconstruct": 336
+      },
+      {
+        "gear": 0.7000000000000001,
+        "mix": 3.92,
+        "reconstruct": 392
+      },
+      {
+        "gear": 0.8,
+        "mix": 4.48,
+        "reconstruct": 448
+      },
+      {
+        "gear": 0.9,
+        "mix": 5.04,
+        "reconstruct": 504
+      },
+      {
+        "gear": 1,
+        "mix": 5.6,
+        "reconstruct": 560
+      }
+    ],
+    "on": false,
+    "view": null
+  }
+}

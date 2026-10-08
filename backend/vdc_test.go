@@ -39,7 +39,7 @@ func TestParseSyntheticVDC(t *testing.T) {
 		t.Errorf("wrong coefficients:%+v", secs[0])
 	}
 	if _, _, err := parseVDC([]byte("not a vdc"), 48000); err == nil {
-		t.Error("garbage inputshouldfail")
+		t.Error("garbage input should fail")
 	}
 }
 
@@ -51,22 +51,22 @@ func TestQuantisationKeepsResponse(t *testing.T) {
 		t.Fatalf("quantize failed:%v", err)
 	}
 	if scale != 1.0 {
-		t.Errorf("coefficientin rangeshould notscaling,actual %v", scale)
+		t.Errorf("coefficient in range should not scaling,actual %v", scale)
 	}
 	for _, f := range []float64{100, 1000, 5000, 10000, 15000} {
 		a := vdcResponseDB(secs, f, 48000)
 		b := vdcQ315ResponseDB(q, f, 48000)
 		if d := math.Abs(a - b); d > 0.5 {
-			t.Errorf("%g Hz atpre/post-quantize difference %.2f dB(should < 0.5)", f, d)
+			t.Errorf("%g Hz at pre/post-quantize difference %.2f dB(should < 0.5)", f, d)
 		}
 	}
 }
 
 func TestButterworthVDCIsTenKilohertzLowpass(t *testing.T) {
-	const p = "/home/ooo/.config/jamesdsp/vdc/Butterworth.vdc"
+	p := localDataPath("vdc", "Butterworth.vdc")
 	b, err := os.ReadFile(p)
 	if err != nil {
-		t.Skipf("this machine lacksthat file vdc(%v)-- skipping", err)
+		t.Skipf("this machine lacks that file vdc(%v)-- skipping", err)
 	}
 	secs, rate, err := parseVDC(b, 48000)
 	if err != nil {
@@ -81,7 +81,7 @@ func TestButterworthVDCIsTenKilohertzLowpass(t *testing.T) {
 	rel := func(f float64) float64 { return vdcResponseDB(secs, f, 48000) - ref }
 	for _, f := range []float64{100, 1000, 3000, 6000} {
 		if d := rel(f); math.Abs(d) > 0.5 {
-			t.Errorf("%g Hz atpassband ripple:%+.2f dB", f, d)
+			t.Errorf("%g Hz at passband ripple:%+.2f dB", f, d)
 		}
 	}
 	if d := rel(10000); math.Abs(d-(-3.0)) > 1.0 {
@@ -126,7 +126,7 @@ func TestDDCLoadsIntoChainAndClears(t *testing.T) {
 	}
 	v := ddcView()
 	if v["on"] != true || v["name"] != "probe.vdc" || v["rate"] != 48000 {
-		t.Errorf("current stateis wrong:%+v", v)
+		t.Errorf("current state is wrong:%+v", v)
 	}
 	nodes, err := buildChainNodes(nil, nil, nil, nil)
 	if err != nil {
@@ -139,7 +139,7 @@ func TestDDCLoadsIntoChainAndClears(t *testing.T) {
 		}
 	}
 	if found != 1 {
-		t.Errorf("in chainshould have 1 sections DDC,actual %d(node %+v)", found, nodes)
+		t.Errorf("in chain should have 1 sections DDC,actual %d(node %+v)", found, nodes)
 	}
 
 	if _, err := buildSlotPlanNodes(nodes); err != nil {
@@ -148,19 +148,19 @@ func TestDDCLoadsIntoChainAndClears(t *testing.T) {
 
 	ddcClear()
 	if v := ddcView(); v["on"] != false {
-		t.Errorf("after clearingshould beoff:%+v", v)
+		t.Errorf("after clearing should be off:%+v", v)
 	}
 	if got, _ := buildChainNodes(nil, nil, nil, nil); len(got) != 0 {
-		t.Errorf("after clearingin chainshould no longer containnode,actual %+v", got)
+		t.Errorf("after clearing in chain should no longer contain node,actual %+v", got)
 	}
 }
 
 func TestDDCTwentySectionsExceedBudget(t *testing.T) {
 	resetDDC()
 	defer resetDDC()
-	b, err := os.ReadFile("/home/ooo/.config/jamesdsp/vdc/Butterworth.vdc")
+	b, err := os.ReadFile(localDataPath("vdc", "Butterworth.vdc"))
 	if err != nil {
-		t.Skipf("this machine lacksthat file vdc(%v)-- skipping", err)
+		t.Skipf("this machine lacks that file vdc(%v)-- skipping", err)
 	}
 	n, err := setDDCFromVDC(b, "butterworth.vdc")
 	if err != nil {
@@ -173,7 +173,7 @@ func TestDDCTwentySectionsExceedBudget(t *testing.T) {
 	}
 	if n <= maxSections {
 		if _, err := buildSlotPlanNodes(nodes); err != nil {
-			t.Errorf("section countatwithin limitsbutplanning failed:%v", err)
+			t.Errorf("section count at within limits but planning failed:%v", err)
 		}
 		return
 	}
@@ -187,20 +187,20 @@ func TestDDCTwentySectionsExceedBudget(t *testing.T) {
 func TestDDCFitFromRealVDC(t *testing.T) {
 	resetDDC()
 	defer resetDDC()
-	b, err := os.ReadFile("/home/ooo/.config/jamesdsp/vdc/Butterworth.vdc")
+	b, err := os.ReadFile(localDataPath("vdc", "Butterworth.vdc"))
 	if err != nil {
-		t.Skipf("this machine lacksthat file vdc(%v)-- skipping", err)
+		t.Skipf("this machine lacks that file vdc(%v)-- skipping", err)
 	}
 	n, fc, dev, err := fitDDCFromVDC(b, "butterworth.vdc", 4)
 	if err != nil {
 		t.Fatalf("fit failed:%v", err)
 	}
-	t.Logf("fit %d sections,−3 dB point %.1f Hz,from original filemax deviation %.2f dB", n, fc, dev)
+	t.Logf("fit %d sections,−3 dB point %.1f Hz,from original file max deviation %.2f dB", n, fc, dev)
 	if n != 4 {
 		t.Errorf("should fit 4 sections,actual %d", n)
 	}
 	if math.Abs(fc-10000) > 500 {
-		t.Errorf("−3 dB pointshould ≈10 kHz,actual %.0f Hz", fc)
+		t.Errorf("−3 dB point should ≈10 kHz,actual %.0f Hz", fc)
 	}
 
 	q := sectionsToQ315Engine(butterworthLP(4, fc, 48000))
@@ -212,13 +212,13 @@ func TestDDCFitFromRealVDC(t *testing.T) {
 		}
 	}
 	if d := rel(fc); math.Abs(d-(-3.0)) > 0.5 {
-		t.Errorf("after fitting −3 dB pointshouldfalls %.0f Hz on,actual %+.2f dB", fc, d)
+		t.Errorf("after fitting −3 dB point should falls %.0f Hz on,actual %+.2f dB", fc, d)
 	}
 	prev := 0.0
 	for _, f := range []float64{2000, 4000, 6000, 8000, 10000, 12000, 16000} {
 		v := rel(f)
 		if v > prev+0.01 {
-			t.Errorf("after fitting %g Hz atis notmonotonic roll-off(%+.2f dB,previous gear %+.2f)", f, v, prev)
+			t.Errorf("after fitting %g Hz atis not monotonic roll-off(%+.2f dB,previous gear %+.2f)", f, v, prev)
 		}
 		prev = v
 	}
@@ -233,17 +233,17 @@ func TestDDCFitFromRealVDC(t *testing.T) {
 		eq7[i] = planNode{Kind: planKindBiquad, Coefs: [5]int32{1 << 15, 0, 0, 0, 0}}
 	}
 	if _, err := buildSlotPlanNodes(append(eq7, nodes...)); err != nil {
-		t.Errorf("4 sections DDC + 7 sections EQ shouldfit(16 sectionsbudget):%v", err)
+		t.Errorf("4 sections DDC + 7 sections EQ should fit(16 sections budget):%v", err)
 	}
 }
 
 func TestSixteenSectionDDCWithFIRFitsSlots(t *testing.T) {
-	b, err := os.ReadFile("/home/ooo/.config/jamesdsp/vdc/Butterworth.vdc")
+	b, err := os.ReadFile(localDataPath("vdc", "Butterworth.vdc"))
 	if err != nil {
-		t.Skip("this machine lacksthat file .vdc")
+		t.Skip("this machine lacks that file .vdc")
 	}
 	if _, _, _, err := fitDDCFromVDC(b, "probe16.vdc", 16); err != nil {
-		t.Fatalf("16 sectionsfit failed:%v", err)
+		t.Fatalf("16 sections fit failed:%v", err)
 	}
 	defer ddcClear()
 	ddcMu.Lock()
@@ -266,9 +266,9 @@ func TestSixteenSectionDDCWithFIRFitsSlots(t *testing.T) {
 }
 
 func TestDDCFitFidelityImprovesWithSections(t *testing.T) {
-	b, err := os.ReadFile("/home/ooo/.config/jamesdsp/vdc/Butterworth.vdc")
+	b, err := os.ReadFile(localDataPath("vdc", "Butterworth.vdc"))
 	if err != nil {
-		t.Skip("this machine lacksthat file .vdc")
+		t.Skip("this machine lacks that file .vdc")
 	}
 	src, _, err := parseVDC(b, 48000)
 	if err != nil {
@@ -277,7 +277,7 @@ func TestDDCFitFidelityImprovesWithSections(t *testing.T) {
 	srcRef := vdcResponseDB(src, 1000, 48000)
 	src12 := vdcResponseDB(src, 12000, 48000) - srcRef
 	if src12 > -60 {
-		t.Fatalf("prerequisite changed:sourcefile 12 kHz only %.1f dB,no longerisbrick-wall", src12)
+		t.Fatalf("prerequisite changed:source file 12 kHz only %.1f dB,no longer is brick-wall", src12)
 	}
 
 	at12 := func(fit []vdcSection) (float64, float64) {
@@ -296,7 +296,7 @@ func TestDDCFitFidelityImprovesWithSections(t *testing.T) {
 		t.Errorf("more sections should mean steeper: 4 sections %.1f / 8 sections %.1f / 16 sections %.1f dB", f4, f8, f16)
 	}
 	if f16 > -70 {
-		t.Errorf("16 sectionsat 12 kHz only reaches %.1f dB,from brick-wall(%.1f dB)too far", f16, src12)
+		t.Errorf("16 sections at 12 kHz only reaches %.1f dB,from brick-wall(%.1f dB)too far", f16, src12)
 	}
 	if d := math.Abs(q16 - f16); d > 0.1 {
 		t.Errorf("Q3.15 fixed-point adds %.2f dB error at 12 kHz (should be negligible)", d)
@@ -304,7 +304,7 @@ func TestDDCFitFidelityImprovesWithSections(t *testing.T) {
 
 	if d := math.Abs((vdcQ315ResponseDB(sectionsToQ315Engine(butterworthLP(16, fc, 48000)), 10000, 48000) -
 		vdcQ315ResponseDB(sectionsToQ315Engine(butterworthLP(16, fc, 48000)), 1000, 48000)) - (-3.0)); d > 0.3 {
-		t.Errorf("16 sectionsfitatkneeatis not −3 dB(deviation %.2f)", d)
+		t.Errorf("16 sections fit at knee at is not −3 dB(deviation %.2f)", d)
 	}
 }
 
@@ -316,25 +316,25 @@ func TestDDCSectionCountSurvivesNamedReload(t *testing.T) {
 	ensureChainItem("ddc", "probe.vdc")
 	setChainItemParam("ddc", "sections", 16)
 	if got := chainItemParam("ddc", "sections", 4); got != 16 {
-		t.Fatalf("section count in chain itemshould be 16,actual %v", got)
+		t.Fatalf("section count in chain item should be 16,actual %v", got)
 	}
 
 	currentUserChain = nil
 	if got := chainItemParam("ddc", "sections", 4); got != 4 {
-		t.Errorf("noparametershould usedefault 4,actual %v", got)
+		t.Errorf("no parameter should use default 4,actual %v", got)
 	}
 
-	b, err := os.ReadFile("/home/ooo/.config/jamesdsp/vdc/Butterworth.vdc")
+	b, err := os.ReadFile(localDataPath("vdc", "Butterworth.vdc"))
 	if err != nil {
-		t.Skip("this machine lacksthat file .vdc")
+		t.Skip("this machine lacks that file .vdc")
 	}
 	n16, _, _, err := fitDDCFromVDC(b, "probe.vdc", 16)
 	if err != nil || n16 != 16 {
-		t.Fatalf("16 sectionsfit failed:n=%d err=%v", n16, err)
+		t.Fatalf("16 sections fit failed:n=%d err=%v", n16, err)
 	}
 	ddcMu.Lock()
 	if len(ddcSections) != 16 {
-		t.Errorf("after fittingshould be 16 sections,actual %d", len(ddcSections))
+		t.Errorf("after fitting should be 16 sections,actual %d", len(ddcSections))
 	}
 	ddcMu.Unlock()
 }
@@ -382,9 +382,9 @@ func simCascade(q [][5]int32, in []int32) (out []int32, maxState int64, satOut, 
 }
 
 func TestDDCCascadeDoesNotSaturate(t *testing.T) {
-	b, err := os.ReadFile("/home/ooo/.config/jamesdsp/vdc/Butterworth.vdc")
+	b, err := os.ReadFile(localDataPath("vdc", "Butterworth.vdc"))
 	if err != nil {
-		t.Skip("this machine lacksthat file .vdc")
+		t.Skip("this machine lacks that file .vdc")
 	}
 	src, _, _ := parseVDC(b, 48000)
 	fc := vdcMinus3dB(src, 48000)
@@ -397,7 +397,7 @@ func TestDDCCascadeDoesNotSaturate(t *testing.T) {
 	q := sectionsToQ315Engine(butterworthLP(4, fc, 48000))
 	out, _, satSmall, _ := simCascade(q, small)
 	if satSmall != 0 {
-		t.Fatalf("small signalshould notsaturate(%d times)", satSmall)
+		t.Fatalf("small signal should not saturate(%d times)", satSmall)
 	}
 	var peakOut float64
 	for _, v := range out[len(out)/2:] {
@@ -408,7 +408,7 @@ func TestDDCCascadeDoesNotSaturate(t *testing.T) {
 	simDB := 20 * math.Log10(peakOut/(0.001*float64(lim)))
 	refDB := stdRespDB(butterworthLP(4, fc, 48000), 2000) - stdRespDB(butterworthLP(4, fc, 48000), 1000)
 	if d := math.Abs(simDB - refDB); d > 0.5 {
-		t.Fatalf("simulated fixed-pointsemanticsandfloatresponsemismatch(%.2f dB vs %.2f dB)-- conclusionunreliable", simDB, refDB)
+		t.Fatalf("simulated fixed-point semantics and float response mismatch(%.2f dB vs %.2f dB)-- conclusion unreliable", simDB, refDB)
 	}
 
 	for _, nsec := range []int{4, 8, 16} {
@@ -428,9 +428,9 @@ func TestDDCCascadeDoesNotSaturate(t *testing.T) {
 }
 
 func TestConvolutionClippingDependsOnHeadroom(t *testing.T) {
-	b, err := os.ReadFile("/home/ooo/.config/jamesdsp/irs/thepbone-clear_bass-audio.irs")
+	b, err := os.ReadFile(localDataPath("irs", "thepbone-clear_bass-audio.irs"))
 	if err != nil {
-		t.Skip("this machine lacksthat IR")
+		t.Skip("this machine lacks that IR")
 	}
 	resetIRState()
 	defer resetIRState()
@@ -473,7 +473,7 @@ func TestConvolutionClippingDependsOnHeadroom(t *testing.T) {
 		t.Errorf("prerequisite no longer holds: headroom off should have clipped (measured 0)-- this IR gain changed, revisit the criterion")
 	}
 	if withHR != 0 {
-		t.Errorf("enabledin-chain headroom(/%d)afterstillclipping %d times -- 18 dB cannot coverthis IR(worst-case gain %+.2f dB)",
+		t.Errorf("enabled in-chain headroom(/%d)after still clipping %d times -- 18 dB cannot cover this IR(worst-case gain %+.2f dB)",
 			1<<HEADROOM, withHR, firGainDBForHeadroom())
 	}
 	t.Logf("headroom off: clipping %d/%d samples;headroom on(/%d): clipping %d(worst-case gain %+.2f dB,headroom 18 dB)",
@@ -484,7 +484,7 @@ func TestDDCNativeLoadsFileSections(t *testing.T) {
 
 	secs := butterworthLP(20, 10000, 48000)
 	if len(secs) != 20 {
-		t.Fatalf("butterworthLP shouldyield 20 sections,actual %d", len(secs))
+		t.Fatalf("butterworthLP should yield 20 sections,actual %d", len(secs))
 	}
 	var sb strings.Builder
 	sb.WriteString("SR_48000:")
@@ -507,7 +507,7 @@ func TestDDCNativeLoadsFileSections(t *testing.T) {
 		t.Fatalf("vdcToQ315：%v", err)
 	}
 	if scale != 1.0 {
-		t.Errorf("thiscoefficientrangeshould not triggerscaling,actual scale=%v", scale)
+		t.Errorf("this coefficient range should not trigger scaling,actual scale=%v", scale)
 	}
 
 	qRef := sectionsToQ315Engine(secs)
@@ -516,12 +516,12 @@ func TestDDCNativeLoadsFileSections(t *testing.T) {
 		a := vdcQ315ResponseDB(qNative, f, 48000)
 		b := vdcQ315ResponseDB(qRef, f, 48000)
 		if math.Abs(a-b) > 0.05 {
-			t.Errorf("%.0f Hz:as-is load %.2f dB vs direct quantization %.2f dB(diff %.2f,sign conventionorquantizemismatch)",
+			t.Errorf("%.0f Hz:as-is load %.2f dB vs direct quantization %.2f dB(diff %.2f,sign convention or quantize mismatch)",
 				f, a, b, a-b)
 		}
 	}
 
 	if d := vdcQ315ResponseDB(qNative, 12000, 48000) - vdcQ315ResponseDB(qNative, 1000, 48000); d > -40 {
-		t.Errorf("12 kHz relative 1 kHz onlysuppress %.1f dB,20 sections Butterworth should notbe this shallow", d)
+		t.Errorf("12 kHz relative 1 kHz only suppress %.1f dB,20 sections Butterworth should not be this shallow", d)
 	}
 }

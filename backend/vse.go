@@ -19,7 +19,7 @@ const (
 
 func vseReconstruct(gear float64) (int, error) {
 	if math.IsNaN(gear) || math.IsInf(gear, 0) {
-		return 0, fmt.Errorf("VSE gearis notfinite number")
+		return 0, fmt.Errorf("VSE gear is not finite number")
 	}
 	if gear < vseGearMin-1e-9 || gear > vseGearMax+1e-9 {
 		return 0, fmt.Errorf("VSE gear %g outside panel range %g...%g(arrays.xml 10 gear)",
@@ -28,8 +28,8 @@ func vseReconstruct(gear float64) (int, error) {
 
 	steps := gear / vseGearStep
 	if math.Abs(steps-math.Round(steps)) > 1e-6 {
-		return 0, fmt.Errorf("VSE gear %g is notpanel gears:panel only has "+
-			"0.1/0.2/.../1.0 tendiscrete gears(per gear +56)", gear)
+		return 0, fmt.Errorf("VSE gear %g is not panel gears:panel only has "+
+			"0.1/0.2/.../1.0 ten discrete gears(per gear +56)", gear)
 	}
 	return int(math.Round(gear * vseReconstructPerGear)), nil
 }

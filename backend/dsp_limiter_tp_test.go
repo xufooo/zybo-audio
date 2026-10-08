@@ -32,7 +32,7 @@ func TestLimKQuantizationWithinRange(t *testing.T) {
 	for _, ms := range []float64{0.5, 5, 50, 200} {
 		got := limMsFromKTP(limKFromMsTP(ms))
 		if math.Abs(got-ms)/ms > 0.20 {
-			t.Errorf("%g ms -> actual %.2f ms(deviation %.1f%%),exceedsquantize sane range", ms, got, 100*(got-ms)/ms)
+			t.Errorf("%g ms -> actual %.2f ms(deviation %.1f%%),exceeds quantize sane range", ms, got, 100*(got-ms)/ms)
 		}
 	}
 }
@@ -59,16 +59,16 @@ func TestLimKMonotoneAndSign(t *testing.T) {
 	for _, ms := range []float64{0.05, 0.5, 5, 50, 200, 341} {
 		k := limKFromMsTP(ms)
 		if k > prev {
-			t.Errorf("%g ms -> k=%d nomonotonically decrease(previous %d)", ms, k, prev)
+			t.Errorf("%g ms -> k=%d no monotonically decrease(previous %d)", ms, k, prev)
 		}
 		prev = k
 	}
 	if limKFromMsTP(200) >= qOne {
-		t.Error("new curverelease coefficientmust < 1.0(log2 domainfirst-order),otherwisewilldiverge")
+		t.Error("new curverelease coefficient must < 1.0(log2 domain first-order),otherwise will diverge")
 	}
 
 	oldRel := math.Exp(1.0 / (200.0 / 1000.0 * sampleRate))
 	if oldRel <= 1.0 {
-		t.Error("old curverelease coefficientshould > 1.0(control group broken,sinceformula was broken)")
+		t.Error("old curverelease coefficient should > 1.0(control group broken,since formula was broken)")
 	}
 }

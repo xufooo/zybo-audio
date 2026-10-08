@@ -32,7 +32,7 @@ func TestCurePassFilterSections(t *testing.T) {
 	}
 
 	if secs[1] != secs[2] || secs[2] != secs[3] {
-		t.Errorf("LPF three stagesshouldbit-exactly identical:%v %v %v", secs[1], secs[2], secs[3])
+		t.Errorf("LPF three stages should bit-exactly identical:%v %v %v", secs[1], secs[2], secs[3])
 	}
 
 	q := [][5]int32{secs[0], secs[1], secs[2], secs[3]}
@@ -41,7 +41,7 @@ func TestCurePassFilterSections(t *testing.T) {
 	d5 := vdcQ315ResponseDB(q, 5, 48000) - ref
 	t.Logf("PassFilter shape:20 kHz %+.2f dB,5 Hz %+.2f dB(referenced to 1 kHz)", d20k, d5)
 	if d20k > -14 || d20k < -18 {
-		t.Errorf("20 kHz attenuation %.2f dB falls [−18,−14] outside(3xfirst-order stage@18k shouldabout −15.9)", d20k)
+		t.Errorf("20 kHz attenuation %.2f dB falls [−18,−14] outside(3xfirst-order stage@18k should about −15.9)", d20k)
 	}
 	if d5 > -3 || d5 < -9 {
 		t.Errorf("5 Hz attenuation %.2f dB falls [−9,−3] outside", d5)
@@ -56,7 +56,7 @@ func TestCurePassFilterSections(t *testing.T) {
 func TestTubeIsOnePoleAverage(t *testing.T) {
 	n := tubeNodes()
 	if len(n) != 1 {
-		t.Fatalf("tubeshould have only 1sections,actual %d", len(n))
+		t.Fatalf("tube should have only 1sections,actual %d", len(n))
 	}
 	c := n[0].Coefs
 	if c != [5]int32{tubeB0, 0, 0, tubeA1, 0} {
@@ -101,16 +101,16 @@ func TestApplyChainRollsBackOnFailure(t *testing.T) {
 	chain = append(chain, ChainItem{Type: "exciter", Enabled: true})
 
 	if err := applyChain(chain, 0, 0); err == nil {
-		t.Skip("test environmentnohardware,applyChain should havefail;skipping")
+		t.Skip("test environment no hardware,applyChain should have fail;skipping")
 	} else if err != nil {
 		t.Logf("rejected as expected:%v", err)
 	}
 
 	if currentTube != tubeOn {
-		t.Errorf("tubestatelost to rollback:%v", currentTube)
+		t.Errorf("tube state lost to rollback:%v", currentTube)
 	}
 	if currentExciter != nil {
-		t.Errorf("exciterwas half-applied(memory %v)", currentExciter)
+		t.Errorf("exciter was half-applied(memory %v)", currentExciter)
 	}
 }
 
@@ -135,15 +135,15 @@ func TestRequestLevelRollbackCoversHandlerFields(t *testing.T) {
 	}
 	chain = append(chain, ChainItem{Type: "exciter", Enabled: true})
 	if err := applyChain(chain, 0, 0); err == nil {
-		t.Skip("test environmentnohardware,should havefail;skipping")
+		t.Skip("test environment no hardware,should have fail;skipping")
 	}
 
 	snap.restore()
 
 	if currentCrossfeed != nil {
-		t.Errorf("crossfeed should berequest-level snapshotrolled back to nil,actual %+v", currentCrossfeed)
+		t.Errorf("crossfeed should be request-level snapshot rolled back to nil,actual %+v", currentCrossfeed)
 	}
 	if currentTube != tubeOn {
-		t.Errorf("tubestatemust not change:%v", currentTube)
+		t.Errorf("tube state must not change:%v", currentTube)
 	}
 }

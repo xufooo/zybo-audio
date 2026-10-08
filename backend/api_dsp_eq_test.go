@@ -58,11 +58,11 @@ func TestEQParseREWTextGivesBands(t *testing.T) {
 		"Filter 2: ON PK Fc 1000 Hz Gain -2.5 dB Q 2.0\n"
 	rec := eqParse(t, http.MethodPost, "?name=probe", body)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("parse REW textshould 200,actual %d:%s", rec.Code, rec.Body.String())
+		t.Fatalf("parse REW text should 200,actual %d:%s", rec.Code, rec.Body.String())
 	}
 	n, bands := decodeParse(t, rec)
 	if n == 0 {
-		t.Fatal("should parsesections,actual 0 sections")
+		t.Fatal("should parse sections,actual 0 sections")
 	}
 	found := false
 	for _, b := range bands {
@@ -104,7 +104,7 @@ func TestEQParseWritesNothingAndAppliesNothing(t *testing.T) {
 		t.Fatalf("parse endpoint must not store: user preset dir %d -> %d files", before, after)
 	}
 	if len(lastPlanCoefs) != len(coefsBefore) {
-		t.Fatalf("parse endpointshould notdispatch chain:coefficient plan %d -> %d items", len(coefsBefore), len(lastPlanCoefs))
+		t.Fatalf("parse endpoint should not dispatch chain:coefficient plan %d -> %d items", len(coefsBefore), len(lastPlanCoefs))
 	}
 }
 

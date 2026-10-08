@@ -24,7 +24,7 @@ func TestZZBypassInSnapshot(t *testing.T) {
 		t.Fatalf("written content is not valid JSON: %v", err)
 	}
 	if !st.Bypass {
-		t.Errorf("dspBypass=true when fast in Bypass should be true")
+		t.Errorf("dspBypass=true when snapshot in Bypass should be true")
 	}
 
 	var m map[string]any
@@ -32,7 +32,7 @@ func TestZZBypassInSnapshot(t *testing.T) {
 		t.Fatalf("second parse failed: %v", err)
 	}
 	if _, ok := m["bypass"]; !ok {
-		t.Errorf("write to disk JSON in missing bypass key (omitempty swallowed？)")
+		t.Errorf("write to disk JSON in missing bypass key (omitempty swallowed?)")
 	}
 
 	resetRuntimeGlobals()
@@ -47,7 +47,7 @@ func TestZZBypassInSnapshot(t *testing.T) {
 		t.Fatalf("written content is not valid JSON: %v", err)
 	}
 	if st2.Bypass {
-		t.Errorf("dspBypass=false when fast in Bypass should be false")
+		t.Errorf("dspBypass=false when snapshot in Bypass should be false")
 	}
 }
 
@@ -55,7 +55,7 @@ func readBypassStateFile(t *testing.T, path string) []byte {
 	t.Helper()
 	raw, err := os.ReadFile(path)
 	if err != nil || len(raw) == 0 {
-		t.Fatalf("state file read not to (%s): %v", path, err)
+		t.Fatalf("cannot read state file (%s): %v", path, err)
 	}
 	return raw
 }

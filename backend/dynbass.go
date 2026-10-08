@@ -84,7 +84,7 @@ func dynamicBassLowPassCoefs(pct float64) ([5]int32, error) {
 	for i, v := range c {
 		if v > coefMax || v < coefMin {
 			return c, fmt.Errorf("DynamicBass 55 Hz lowpass coefficient %d = %d out of Q3.15 range"+
-				"（bass=%g ⇒ Q=%g）", i, v, pct, q)
+				"(bass=%g => Q=%g)", i, v, pct, q)
 		}
 	}
 	if c[0] == 0 && c[1] == 0 && c[2] == 0 {
@@ -105,9 +105,9 @@ func dynamicBassValidate(p dynamicBassParams) ([6]float64, error) {
 			dynamicBassBassMaxPct, p.Bass, dynamicBassBassMaxPct)
 	}
 	if c[0] > dynamicBassSimpleBranchMaxX1 {
-		return c, fmt.Errorf("V4A DynamicBass **full branch** unavailable: x1 = %g > %g"+
+		return c, fmt.Errorf("V4A DynamicBass ** full branch ** unavailable: x1 = %g > %g"+
 			"(`DynamicBass.cpp:29-41`) - not implemented on this unit (can be built from existing opcodes, ~11-12 slots,"+
-			"but the engine caps at 24 slots with 22 used by the baseline chain => so it does not fit the existing chain; **not missing hardware**)."+
+			"but the engine caps at 24 slots with 22 used by the baseline chain => so it does not fit the existing chain; ** not missing hardware **)."+
 			"pick a preset with x1 <= %g (V4A official default \"100;5600;40;80;50;50\" is);"+
 			"full branch is tracked for 0.3 (effects + UI)",
 			c[0], dynamicBassSimpleBranchMaxX1, dynamicBassSimpleBranchMaxX1)
@@ -202,5 +202,5 @@ func dynBassSideLagDegrees() float64 {
 
 func dynamicBassFullBranchBlocker() string {
 	return "Full branch (x1 > 120) not implemented yet: can be built from existing opcodes (~11-12 slots)," +
-		"but the engine caps at 24 slots with 22 used by the baseline chain, so it does not fit. **No new hardware needed**, tracked for 0.3."
+		"but the engine caps at 24 slots with 22 used by the baseline chain, so it does not fit. ** No new hardware needed **, tracked for 0.3."
 }

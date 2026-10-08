@@ -73,7 +73,7 @@ var (
 	dspLimiterRelMs = limDefaultRelMs
 )
 
-var errDSPUnavailable = errors.New("DSP unavailable(/dev/mem unmappedor IP missing)")
+var errDSPUnavailable = errors.New("DSP unavailable(/dev/mem unmapped or IP missing)")
 
 type slotConfig struct {
 	Type   string
@@ -219,17 +219,17 @@ func dspInit() {
 		log.Printf("DSP limiter init failed: %v", err)
 	}
 	if err := dspSetLimiterTimes(dspLimiterAttMs, dspLimiterRelMs); err != nil {
-		log.Printf("DSP limiter time constantsinit failed: %v", err)
+		log.Printf("DSP limiter time constants init failed: %v", err)
 	}
 	if err := dspApplyPreset("flat"); err != nil {
-		log.Printf("DSP initial presetfailed: %v", err)
+		log.Printf("DSP initial preset failed: %v", err)
 	}
 	dspEnabled = true
 	dspBypass = false
 	if err := dspWriteCtrl(); err != nil {
 		log.Printf("DSP CTRL init failed: %v", err)
 	}
-	log.Printf("DSP ready:up to %d sectionsdual-mono @%.0fHz,limiter %s(%s)@%.1fdBFS",
+	log.Printf("DSP ready:up to %d sections dual-mono @%.0fHz,limiter %s(%s)@%.1fdBFS",
 		bandLimit(), sampleRate, onOff(dspLimiterEnabled), limiterModeName(), initThrDB)
 }
 
@@ -516,7 +516,7 @@ func sanitizeBand(sc slotConfig) slotConfig {
 
 func checkCoef(name string, v int32) (int32, error) {
 	if v > coefMax || v < coefMin {
-		return 0, fmt.Errorf("coefficient %s=%d exceeds Q3.15 range [%d,%d](points/gaintoo aggressive)",
+		return 0, fmt.Errorf("coefficient %s=%d exceeds Q3.15 range [%d,%d](points/gain too aggressive)",
 			name, v, coefMin, coefMax)
 	}
 	return v, nil
@@ -719,7 +719,7 @@ func dspWriteAllBands() error {
 
 		if err := dspAntiPopAfterDownload(plan); err != nil {
 
-			log.Printf("ViPERBass antiPop rampfailed to start(chain already live,just missingthat 1 s fade-in):%v", err)
+			log.Printf("ViPERBass antiPop ramp failed to start(chain already live,just missing that 1 s fade-in):%v", err)
 		}
 		return dspWriteCtrl()
 	}

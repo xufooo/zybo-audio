@@ -60,7 +60,7 @@ func parseVDC(b []byte, wantRate int) (secs []vdcSection, rate int, err error) {
 			}
 			v, verr := strconv.ParseFloat(tok, 64)
 			if verr != nil {
-				return nil, 0, fmt.Errorf("SR_%d that linehasunparsable number:%q", r, tok)
+				return nil, 0, fmt.Errorf("SR_%d that line has unparsable number:%q", r, tok)
 			}
 			vals = append(vals, v)
 		}
@@ -106,7 +106,7 @@ func vdcToQ315(secs []vdcSection) ([][5]int32, float64, error) {
 		}
 	}
 	if lim == 0 {
-		return nil, 0, fmt.Errorf("coefficientall zero")
+		return nil, 0, fmt.Errorf("coefficient all zero")
 	}
 	scale := 1.0
 	if lim > maxQ {

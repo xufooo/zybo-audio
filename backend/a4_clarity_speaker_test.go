@@ -94,10 +94,10 @@ func TestSpeakerCorrectionMergeMatchesDirectForm(t *testing.T) {
 		}
 	}
 	if maxErr > 2e-3 {
-		t.Errorf("merged formand V4A direct formmismatch:max error %g(signal peak %g)-- "+
+		t.Errorf("merged form and V4A direct form mismatch:max error %g(signal peak %g)-- "+
 			"the derivation folding 0.5*(1+BP) into the numerator is wrong", maxErr, maxAbs)
 	}
-	t.Logf("same setupsample-by-samplemax error %g(peak %g)", maxErr, maxAbs)
+	t.Logf("same setup sample-by-sample max error %g(peak %g)", maxErr, maxAbs)
 
 	for _, f := range []float64{20, 100, 420, 1000, 5000, 13500, 18000} {
 		got := cmplx.Abs(biquadResponse(mine[0].i32(), f, fs)) *
@@ -142,9 +142,9 @@ func TestClarityNaturalMergeMatchesTwoStages(t *testing.T) {
 			}
 		}
 		if maxErr > 2e-4 {
-			t.Errorf("level=%g:merged single sectionandtwo cascaded stagesmismatch(max error %g)", level, maxErr)
+			t.Errorf("level=%g:merged single section and two cascaded stages mismatch(max error %g)", level, maxErr)
 		}
-		t.Logf("level=%g(g=%.2f)sample-by-samplemax error %g", level, g, maxErr)
+		t.Logf("level=%g(g=%.2f)sample-by-sample max error %g", level, g, maxErr)
 	}
 }
 
@@ -164,11 +164,11 @@ func TestClarityOzoneIsHighShelfAt8250(t *testing.T) {
 
 		wantHigh := 20 * math.Log10(level/100+1)
 		if math.Abs(resp(100)) > 1.0 {
-			t.Errorf("level=%g:100 Hz at %+.2f dB,shelvingmust not touchlows", level, resp(100))
+			t.Errorf("level=%g:100 Hz at %+.2f dB,shelving must not touch lows", level, resp(100))
 		}
 		if math.Abs(resp(16000)-wantHigh) > 1.5 {
 			t.Errorf("level=%g:16 kHz at %+.2f dB,expected ≈ %+.2f dB(20*log10(g+1))"+
-				" -- frequencyorgainconventionand ViPERClarity.cpp mismatch", level, resp(16000), wantHigh)
+				" -- frequency or gain convention and ViPERClarity.cpp mismatch", level, resp(16000), wantHigh)
 		}
 		t.Logf("level=%g:100 Hz %+.2f dB,16 kHz %+.2f dB(expected %+.2f)",
 			level, resp(100), resp(16000), wantHigh)
@@ -190,7 +190,7 @@ func TestA4SectionCost(t *testing.T) {
 
 	for _, n := range append(append([]planNode{}, cn...), sn...) {
 		if n.Kind != planKindBiquad {
-			t.Errorf("A4 sectionsshouldall planKindBiquad,got %q", n.Kind)
+			t.Errorf("A4 sections should all planKindBiquad,got %q", n.Kind)
 		}
 	}
 }
@@ -199,7 +199,7 @@ func TestClarityXHIFIIsImplemented(t *testing.T) {
 	clr := clarityParams{Mode: clarityModeXHIFI, Level: 50}
 	nodes, err := clarityNodes(clr, 48000)
 	if err != nil {
-		t.Fatalf("XHIFI alreadyimplemented,clarityNodes should not fail:%v", err)
+		t.Fatalf("XHIFI already implemented,clarityNodes should not fail:%v", err)
 	}
 	if len(nodes) != 1 || nodes[0].Kind != planKindXHIFI {
 		t.Fatalf("XHIFI must be planned as planKindXHIFI, got %+v (silently degrading to another gear = user thinks XHIFI is on)", nodes)
@@ -286,10 +286,10 @@ func TestA4ChainOrderAndSectionBudget(t *testing.T) {
 		}
 	}
 	if clrIdx < 0 {
-		t.Fatal("in chainnot found Clarity that section(coefficientmismatch)")
+		t.Fatal("in chain not found Clarity that section(coefficient mismatch)")
 	}
 	if len(spkIdx) != 3 {
-		t.Fatalf("in chainshould have 3 sections SpeakerCorrection,got %d sections(position %v)", len(spkIdx), spkIdx)
+		t.Fatalf("in chain should have 3 sections SpeakerCorrection,got %d sections(position %v)", len(spkIdx), spkIdx)
 	}
 	if crossIdx < 0 || delayIdx < 0 || tubeIdx < 0 {
 		t.Fatalf("cross/surround/tube not found: cross=%d delay=%d tube=%d", crossIdx, delayIdx, tubeIdx)
@@ -314,9 +314,9 @@ func TestA4ChainOrderAndSectionBudget(t *testing.T) {
 		}
 	}
 	if nSec > maxSections {
-		t.Errorf("thischain biquad section count %d exceeds engine cap %d", nSec, maxSections)
+		t.Errorf("this chain biquad section count %d exceeds engine cap %d", nSec, maxSections)
 	}
-	t.Logf("chain order:clarity@%d < cross@%d,surround@%d < speaker@%v < tube@%d;biquad sectionsof %d/%d",
+	t.Logf("chain order:clarity@%d < cross@%d,surround@%d < speaker@%v < tube@%d;biquad sections of %d/%d",
 		clrIdx, crossIdx, delayIdx, spkIdx, tubeIdx, nSec, maxSections)
 }
 
@@ -333,22 +333,22 @@ func TestAdoptHardwareCaps(t *testing.T) {
 	adoptCapsFrom(dspEngineCaps{})
 	if hwMaxSections != maxSections || hwCoefWords != coefWordsPerBank ||
 		hwCoefFIRBase != coefFIRBase || hwDelayWords != maxDelayWords {
-		t.Errorf("old bitstream(field is 0)must not changeanycapacity:sections=%d coefficient=%d base=%d delay=%d",
+		t.Errorf("old bitstream(field is 0)must not change any capacity:sections=%d coefficient=%d base=%d delay=%d",
 			hwMaxSections, hwCoefWords, hwCoefFIRBase, hwDelayWords)
 	}
 
 	adoptCapsFrom(dspEngineCaps{NumSections: 24, NumCoefWords: 120, DelayLog2: 8})
 	if hwMaxSections != 24 {
-		t.Errorf("sectionscap should tighten to 24,got %d", hwMaxSections)
+		t.Errorf("sections cap should tighten to 24,got %d", hwMaxSections)
 	}
 	if hwCoefWords != 120 {
-		t.Errorf("coefficientword countshould be 120,got %d", hwCoefWords)
+		t.Errorf("coefficient word count should be 120,got %d", hwCoefWords)
 	}
 	if hwCoefFIRBase != 240 {
-		t.Errorf("FIR baseshould be 2*120=240,got %d -- thisis wrongconvolver coefficientswritten into biquad space", hwCoefFIRBase)
+		t.Errorf("FIR base should be 2*120=240,got %d -- this is wrong convolver coefficients written into biquad space", hwCoefFIRBase)
 	}
 	if hwDelayWords != 256 {
-		t.Errorf("delay ringshould be 1<<8=256,got %d", hwDelayWords)
+		t.Errorf("delay ring should be 1<<8=256,got %d", hwDelayWords)
 	}
 	if bandLimit() > hwMaxSections {
 		t.Errorf("bandLimit()=%d exceeds hardware-advertised section count %d", bandLimit(), hwMaxSections)
@@ -364,7 +364,7 @@ func TestAdoptHardwareCaps(t *testing.T) {
 			sfirTaps, sfirOvh, hwSFIRMaxTaps, hwSFIROvh)
 	}
 	if hwCoefSFIRBase != coefFIRBase+2*firTaps {
-		t.Errorf("small FIR baseshould be 2*NCOEF + 2*FIR_TAPS = %d,got %d",
+		t.Errorf("small FIR base should be 2*NCOEF + 2*FIR_TAPS = %d,got %d",
 			coefFIRBase+2*firTaps, hwCoefSFIRBase)
 	}
 
@@ -402,10 +402,10 @@ func TestAnalogXIsLastEffect(t *testing.T) {
 		}
 	}
 	if axIdx < 0 {
-		t.Fatal("in chainnot found AnalogX node")
+		t.Fatal("in chain not found AnalogX node")
 	}
 	if tubeIdx < 0 {
-		t.Fatal("in chainnot foundtubesections(confirm first currentTube live)")
+		t.Fatal("in chain not found tube sections(confirm first currentTube live)")
 	}
 	if axIdx < tubeIdx {
 		t.Errorf("AnalogX must come after tube (V4A: tube(14) -> AnalogX(15)), got %d vs %d",
@@ -417,7 +417,7 @@ func TestAnalogXIsLastEffect(t *testing.T) {
 	}
 
 	if len(an) != 1 {
-		t.Fatalf("AnalogX shouldonlyemitonenode,got %d", len(an))
+		t.Fatalf("AnalogX should only emit one node,got %d", len(an))
 	}
 }
 
@@ -479,10 +479,10 @@ func TestAnalogXPlanEmitsFiveSlots(t *testing.T) {
 	}
 
 	if plan.Slots != 5 {
-		t.Errorf("AnalogX shouldemit 5 slots,got %d", plan.Slots)
+		t.Errorf("AnalogX should emit 5 slots,got %d", plan.Slots)
 	}
 	if len(plan.Coefs) != 32 {
-		t.Errorf("AnalogX shouldemit 32 coefficients(5+12+5+5+5),got %d", len(plan.Coefs))
+		t.Errorf("AnalogX should emit 32 coefficients(5+12+5+5+5),got %d", len(plan.Coefs))
 	}
 	t.Logf("slots=%d sections=%d coefficient=%d", plan.Slots, plan.Sections, len(plan.Coefs))
 }

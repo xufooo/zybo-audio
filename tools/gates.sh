@@ -32,9 +32,9 @@ else
   note "ok: no user IR/VDC files"
 fi
 
-if git grep -n -I -E "/home/ooo|~/Works|192\.168\.|BEGIN .*PRIVATE|api[_-]?key|password|ssid" -- . ':!pins.env' >/dev/null; then
+if git grep -n -I -E "/home/ooo|~/Works|192\.168\.|BEGIN .*PRIVATE|api[_-]?key|password|ssid" -- . ':!pins.env' ':!tools/gates.sh' >/dev/null; then
   bad "local paths or secrets present:"
-  git grep -n -I -E "/home/ooo|~/Works|192\.168\.|BEGIN .*PRIVATE|api[_-]?key|password|ssid" -- . ':!pins.env' | head -5
+  git grep -n -I -E "/home/ooo|~/Works|192\.168\.|BEGIN .*PRIVATE|api[_-]?key|password|ssid" -- . ':!pins.env' ':!tools/gates.sh' | head -5
 else
   note "ok: no local paths/secrets"
 fi
@@ -52,9 +52,10 @@ while IFS= read -r f; do python3 -m py_compile "$f" || bad "python syntax: $f"; 
 rm -rf __pycache__ tools/__pycache__
 note "ok: python syntax"
 
+tagok=1
 for tag in v0.3.0; do
-  git rev-parse -q --verify "refs/tags/$tag" >/dev/null || bad "missing tag $tag"
+  git rev-parse -q --verify "refs/tags/$tag" >/dev/null || { bad "missing tag $tag"; tagok=0; }
 done
-note "ok: tags present"
+[ "$tagok" -eq 1 ] && note "ok: tags present"
 
 exit "$fail"

@@ -60,11 +60,11 @@ func TestXHIFINodeNumbers(t *testing.T) {
 		wantHP := q315Round(1.2 * c.gain)
 		wantBP := q315Round(c.gain)
 		if n.Mix[0] != wantHP || n.Mix[1] != wantBP {
-			t.Errorf("level=%g:first stageweights (%d,%d),want (%d,%d)",
+			t.Errorf("level=%g:first stage weights (%d,%d),want (%d,%d)",
 				c.level, n.Mix[0], n.Mix[1], wantHP, wantBP)
 		}
 		if n.MixB[0] != q315Round(1.0) || n.MixB[1] != q315Round(1.0) {
-			t.Errorf("level=%g:second stageweights %v,wantall 1", c.level, n.MixB)
+			t.Errorf("level=%g:second stage weights %v,want all 1", c.level, n.MixB)
 		}
 		if n.Flags != 120 || n.Len != 240 {
 			t.Errorf("level=%g:branch delay %d/%d samples,want 120/240(48k fs/400,fs/200)",
@@ -92,7 +92,7 @@ func TestXHIFIPlanShape(t *testing.T) {
 			t.Errorf("slot count = %d,want 8(3multi-section biquad + 2 delay + 1single section + 2 MIX2)", p.Slots)
 		}
 		if len(p.Coefs) != 70 {
-			t.Errorf("coefficientwords = %d,want 70(3+3+3+1 sections x5 + 2delay lengths + 2 groupsweights x5)", len(p.Coefs))
+			t.Errorf("coefficient words = %d,want 70(3+3+3+1 sections x5 + 2delay lengths + 2 groups weights x5)", len(p.Coefs))
 		}
 		slots := decodeSlots(t, p)
 
@@ -108,11 +108,11 @@ func TestXHIFIPlanShape(t *testing.T) {
 		l0 := p.Coefs[slots[dl[0]].Cfb]
 		l1 := p.Coefs[slots[dl[1]].Cfb]
 		if l0 != 120 || l1 != 240 {
-			t.Errorf("twobranch delay = %d/%d samples,want 120/240", l0, l1)
+			t.Errorf("two branch delay = %d/%d samples,want 120/240", l0, l1)
 		}
 		o0, o1 := slots[dl[0]].Stb, slots[dl[1]].Stb
 		if o0 != 0 {
-			t.Errorf("slot onedelay in-ring offset = %d,want 0", o0)
+			t.Errorf("slot one delay in-ring offset = %d,want 0", o0)
 		}
 		if o1 < int(l0) {
 			t.Errorf("second delay slot offset %d overlaps the first (length %d) -- two slots will clobber each other", o1, l0)
@@ -123,7 +123,7 @@ func TestXHIFIPlanShape(t *testing.T) {
 
 		last := slots[len(slots)-1]
 		if last.Out != slots[0].In+1 {
-			t.Errorf("last slotoutput bus = %d,wantinput bus %d + 1", last.Out, slots[0].In)
+			t.Errorf("last slot output bus = %d,want input bus %d + 1", last.Out, slots[0].In)
 		}
 
 		used := map[int]bool{}
@@ -152,7 +152,7 @@ func TestXHIFIRejectedOnOldBitstream(t *testing.T) {
 	xhifiWithDelaySlots(t, 1, func() {
 		_, err := buildSlotPlanNodes([]planNode{mustXHIFINode(t, 50)})
 		if err == nil {
-			t.Fatal("hwDelaySlots=1 XHIFI(needstwodelay slots)should bereject")
+			t.Fatal("hwDelaySlots=1 XHIFI(needs two delay slots)should be reject")
 		}
 		if !contains(err.Error(), "delay slots") {
 			t.Errorf("error message should make clear that delay slots are insufficient: %v", err)
@@ -167,7 +167,7 @@ func TestDelayOffsetAllocation(t *testing.T) {
 			{Kind: planKindDelay, Len: 2000},
 		})
 		if err != nil {
-			t.Fatalf("twoshort delayshould fit:%v", err)
+			t.Fatalf("two short delay should fit:%v", err)
 		}
 		sl := decodeSlots(t, p)
 		if sl[0].Stb != 0 || sl[1].Stb != 1000 {
@@ -176,17 +176,17 @@ func TestDelayOffsetAllocation(t *testing.T) {
 
 		p1, err := buildSlotPlanNodes([]planNode{{Kind: planKindDelay, Len: hwDelayWords}})
 		if err != nil {
-			t.Fatalf("singleslotsuse upwhole ringshould be allowed:%v", err)
+			t.Fatalf("single slots use up whole ring should be allowed:%v", err)
 		}
 		if sl1 := decodeSlots(t, p1); sl1[0].Stb != 0 {
-			t.Errorf("single delay slotoffset = %d,want 0", sl1[0].Stb)
+			t.Errorf("single delay slot offset = %d,want 0", sl1[0].Stb)
 		}
 
 		if _, err := buildSlotPlanNodes([]planNode{
 			{Kind: planKindDelay, Len: hwDelayWords},
 			{Kind: planKindDelay, Len: hwDelayWords},
 		}); err == nil {
-			t.Error("twoslotscombinedexceeds ring capacityshould reject")
+			t.Error("two slots combined exceeds ring capacity should reject")
 		}
 	})
 }
@@ -202,16 +202,16 @@ func TestClarityXHIFIThroughChain(t *testing.T) {
 		t.Fatalf("clarityNodes(xhifi)：%v", err)
 	}
 	if len(nodes) != 1 || nodes[0].Kind != planKindXHIFI {
-		t.Fatalf("clarityNodes(xhifi) = %+v,wantone planKindXHIFI", nodes)
+		t.Fatalf("clarityNodes(xhifi) = %+v,want one planKindXHIFI", nodes)
 	}
 	xhifiWithDelaySlots(t, 4, func() {
 		if _, err := buildSlotPlanNodes(nodes); err != nil {
-			t.Errorf("bitstream supportstwodelay slotsshould compile:%v", err)
+			t.Errorf("bitstream supports two delay slots should compile:%v", err)
 		}
 	})
 	xhifiWithDelaySlots(t, 1, func() {
 		if _, err := buildSlotPlanNodes(nodes); err == nil {
-			t.Error("bitstream only supportsonedelay slotsshould reject")
+			t.Error("bitstream only supports one delay slots should reject")
 		}
 	})
 }

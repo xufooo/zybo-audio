@@ -7,9 +7,9 @@ import (
 	"testing"
 )
 
-const (
-	realChainVDCDefault = "/home/ooo/.config/jamesdsp/vdc/mh750.vdc"
-	realChainIRDefault  = "/home/ooo/.config/jamesdsp/irs/thepbone-clear_bass-audio.irs"
+var (
+	realChainVDCDefault = localDataPath("vdc", "mh750.vdc")
+	realChainIRDefault  = localDataPath("irs", "thepbone-clear_bass-audio.irs")
 )
 
 func realChainNodes(t *testing.T, gear float64, bassMode int) []planNode {
@@ -139,7 +139,7 @@ func TestRealChainCapacity(t *testing.T) {
 		plan, err := buildSlotPlanNodes(nodes)
 		hwDelaySlots = saveSlots
 		if err != nil {
-			t.Fatalf("VSE gear=%g / ViPERBass %s:real chainshouldfit,yet rejected :%v",
+			t.Fatalf("VSE gear=%g / ViPERBass %s:real chain should fit,yet rejected :%v",
 				c.gear, name, err)
 		}
 
@@ -157,7 +157,7 @@ func TestRealChainCapacity(t *testing.T) {
 				}
 			}
 			if jsOps != 2 {
-				t.Errorf("%s:joint-stereo slotsshould have 2,got %d", name, jsOps)
+				t.Errorf("%s:joint-stereo slots should have 2,got %d", name, jsOps)
 			}
 		}
 
@@ -201,10 +201,10 @@ func TestRealChainCapacity(t *testing.T) {
 		cost := chainFrameCost(plan.Sections, true, true, hasSFIR, c.colorful, plan.Slots)
 		pct := 100 * float64(cost) / float64(frameBudgetCycles)
 		if pct > 90 {
-			t.Errorf("%s gear=%g:frame budget usage %.1f%% > 90%%(recommended cap),willlosesamples",
+			t.Errorf("%s gear=%g:frame budget usage %.1f%% > 90%%(recommended cap),will lose samples",
 				name, c.gear, pct)
 		}
-		t.Logf("%s gear=%.1f:**%d slots / %d sections / %d coefficient**(cap %d / %d / %d),bus peak %d(reserved numbersstart %d);"+
+		t.Logf("%s gear=%.1f:**%d slots / %d sections / %d coefficient**(cap %d / %d / %d),bus peak %d(reserved numbers start %d);"+
 			"frame budget %d/%d cycles = **%.1f%%**(conservative estimate:per section 12 cycles;small FIR %d cycles;joint-stereo section %d cycles)",
 			name, c.gear, plan.Slots, plan.Sections, len(plan.Coefs),
 			slotLimit(), hwMaxSections, hwCoefWords, peak, crossLoBus,

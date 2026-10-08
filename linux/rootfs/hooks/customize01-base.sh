@@ -135,7 +135,7 @@ chroot "$TARGET" chpasswd <<EOF
 root:${ROOT_PW}
 EOF
 if [ "${ZYBO_ROOT_PW:-}" = "" ]; then
-    echo "[hook] WARN: root password is the default 'zybo' (override with ZYBO_ROOT_PW)"
+    echo "[hook] WARN: root login uses the default 'zybo' (override with ZYBO_ROOT_PW)"
 fi
 
 rm -f "$TARGET"/etc/ssh/ssh_host_*

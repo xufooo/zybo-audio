@@ -88,7 +88,7 @@ func TestAntiPopScaleShape(t *testing.T) {
 	const v = 32768
 
 	if got := antiPopScale(v, 0, steps); got != 0 {
-		t.Errorf("step 0should beexact 0(officialfirst frametimes 0),actual %d", got)
+		t.Errorf("step 0should be exact 0(official first frame times 0),actual %d", got)
 	}
 	if got := antiPopScale(v, steps, steps); got != v {
 		t.Errorf("final step should equal compiled value %d bit-exactly, actual %d", v, got)
@@ -111,7 +111,7 @@ func TestAntiPopScaleShape(t *testing.T) {
 
 	step := antiPopScale(v, 1, steps)
 	if step <= 0 {
-		t.Fatalf("per-step incrementshould be positive,actual %d(%d too few steps,rampwould quantize into silence)", step, steps)
+		t.Fatalf("per-step increment should be positive,actual %d(%d too few steps,ramp would quantize into silence)", step, steps)
 	}
 }
 
@@ -130,7 +130,7 @@ func TestAntiPopRampStepsDurationAndEndpoints(t *testing.T) {
 		t.Errorf("advanced %d steps, expected %d steps (1 s / 5 ms per step convention)", nSleep, steps)
 	}
 	if slept != time.Second {
-		t.Errorf("total duration = %v,expectedexactly %v(antiPopSeconds=1)", slept, time.Second)
+		t.Errorf("total duration = %v,expected exactly %v(antiPopSeconds=1)", slept, time.Second)
 	}
 	if want := 2 * (steps + 1); nWrites != want {
 		t.Errorf("register writes = %d,expected %d(initial 2 times + per step 2 times)", nWrites, want)
@@ -145,7 +145,7 @@ func TestAntiPopRampStepsDurationAndEndpoints(t *testing.T) {
 		t.Errorf("start should be (37,0),(38,0),actual %v %v", ws[0], ws[1])
 	}
 	if last := ws[len(ws)-2]; last != (antiPopWrite{37, c0}) {
-		t.Errorf("end c0 = %v,expected (37,%d) -- endmust restore bit-exactly", last, c0)
+		t.Errorf("end c0 = %v,expected (37,%d) -- end must restore bit-exactly", last, c0)
 	}
 	if last := ws[len(ws)-1]; last != (antiPopWrite{38, c1}) {
 		t.Errorf("end c1 = %v,expected (38,%d)", last, c1)
@@ -155,7 +155,7 @@ func TestAntiPopRampStepsDurationAndEndpoints(t *testing.T) {
 		got0 := ws[2*k]
 		got1 := ws[2*k+1]
 		if got0.idx != 37 || got1.idx != 38 {
-			t.Fatalf("step %dwrote towrong coefficientson:%v %v", k, got0, got1)
+			t.Fatalf("step %dwrote to wrong coefficients on:%v %v", k, got0, got1)
 		}
 		if got0.val != antiPopScale(c0, k, steps) || got1.val != antiPopScale(c1, k, steps) {
 			t.Fatalf("step %d = (%d,%d),expected (%d,%d)", k, got0.val, got1.val,
@@ -168,7 +168,7 @@ func TestAntiPopRampStepsDurationAndEndpoints(t *testing.T) {
 		seen[w.idx] = true
 	}
 	if len(seen) != 2 || !seen[37] || !seen[38] {
-		t.Errorf("ramptouched coefficientindex = %v,expectedonly {37,38}", seen)
+		t.Errorf("ramp touched coefficient index = %v,expected only {37,38}", seen)
 	}
 }
 
@@ -185,7 +185,7 @@ func TestAntiPopRampMidwayFailureRollsBack(t *testing.T) {
 
 	nSleep, _, _ := rig.stats()
 	if nSleep >= steps {
-		t.Errorf("after failureshould not advance further:only slept %d steps(of %d steps)", nSleep, steps)
+		t.Errorf("after failure should not advance further:only slept %d steps(of %d steps)", nSleep, steps)
 	}
 	ws := rig.record()
 	if len(ws) < 2 {
@@ -193,10 +193,10 @@ func TestAntiPopRampMidwayFailureRollsBack(t *testing.T) {
 	}
 
 	if last := ws[len(ws)-2]; last != (antiPopWrite{37, c0}) {
-		t.Errorf("after failurefinalwrote is %v,expectedrestore to (37,%d)", last, c0)
+		t.Errorf("after failure final wrote is %v,expected restore to (37,%d)", last, c0)
 	}
 	if last := ws[len(ws)-1]; last != (antiPopWrite{38, c1}) {
-		t.Errorf("after failurefinalwrote is %v,expectedrestore to (38,%d)", last, c1)
+		t.Errorf("after failure final wrote is %v,expected restore to (38,%d)", last, c1)
 	}
 	antiPopMu.Lock()
 	left := antiPopActive
@@ -227,19 +227,19 @@ func TestAntiPopStartFailureRollsBack(t *testing.T) {
 		t.Fatalf("successful persisted writes = %d, expected 3 (only item 1 of the initial pair made it)", len(ws))
 	}
 	if ws[0] != (antiPopWrite{37, 0}) {
-		t.Errorf("initialattempt onewrote = %v,expected (37,0)", ws[0])
+		t.Errorf("initial attempt one wrote = %v,expected (37,0)", ws[0])
 	}
 	if last := ws[len(ws)-2]; last != (antiPopWrite{37, c0}) {
 		t.Errorf("after failed start, last write is %v, expected restore to (37,%d) (must not leave dry gone while wet remains)", last, c0)
 	}
 	if last := ws[len(ws)-1]; last != (antiPopWrite{38, c1}) {
-		t.Errorf("after failed startfinalwrote is %v,expectedrestore to (38,%d)", last, c1)
+		t.Errorf("after failed start final wrote is %v,expected restore to (38,%d)", last, c1)
 	}
 	antiPopMu.Lock()
 	left := antiPopActive
 	antiPopMu.Unlock()
 	if left != nil {
-		t.Errorf("after failed startshould notleavelive ramp %+v", left)
+		t.Errorf("after failed start should not leave live ramp %+v", left)
 	}
 }
 
@@ -257,10 +257,10 @@ func TestAntiPopCancelRestoresAndStops(t *testing.T) {
 		t.Fatalf("on cancel one restoring write should already be issued, %d writes recorded", len(ws))
 	}
 	if last := ws[len(ws)-2]; last != (antiPopWrite{37, c0}) {
-		t.Errorf("on cancelfinalwrote is %v,expectedrestore to (37,%d)", last, c0)
+		t.Errorf("on cancel final wrote is %v,expected restore to (37,%d)", last, c0)
 	}
 	if last := ws[len(ws)-1]; last != (antiPopWrite{38, c1}) {
-		t.Errorf("on cancelfinalwrote is %v,expectedrestore to (38,%d)", last, c1)
+		t.Errorf("on cancel final wrote is %v,expected restore to (38,%d)", last, c1)
 	}
 
 	before := len(rig.record())
@@ -276,10 +276,10 @@ func TestAntiPopTriggerOnlyOnBassOffToOn(t *testing.T) {
 		t.Error("on->on(steady state)should not start a ramp")
 	}
 	if antiPopShouldStart(false, false) || antiPopShouldStart(true, false) {
-		t.Error("no ViPERBass tableshould not start a ramp")
+		t.Error("no ViPERBass table should not start a ramp")
 	}
 	if !antiPopShouldStart(false, true) {
-		t.Error("off->onmuststart ramp")
+		t.Error("off->on must start ramp")
 	}
 
 	defer func() { antiPopBassWasOn = false }()
@@ -291,7 +291,7 @@ func TestAntiPopTriggerOnlyOnBassOffToOn(t *testing.T) {
 	}{
 		{false, false, "off->off"},
 		{true, true, "off->on: should start"},
-		{true, false, "on->on(steady-state dispatch):onceshould notstart"},
+		{true, false, "on->on(steady-state dispatch):once should not start"},
 		{true, false, "on->on: same as above"},
 		{false, false, "on->off"},
 		{false, false, "off->off"},
@@ -321,11 +321,11 @@ func TestAntiPopBassMixIndexPointsAtMixSlot(t *testing.T) {
 			p := pbpPlan(t, tc.p)
 
 			if p.Slots != tc.wantSlots || p.Sections != tc.wantSecs {
-				t.Errorf("slots/sections = %d/%d,expected %d/%d -- antiPop should notchangechain size",
+				t.Errorf("slots/sections = %d/%d,expected %d/%d -- antiPop should not change chain size",
 					p.Slots, p.Sections, tc.wantSlots, tc.wantSecs)
 			}
 			if !p.HasBassMix {
-				t.Fatal("carry ViPERBass tablemustreport HasBassMix(otherwise antiPop not foundshouldwhich two words to patch)")
+				t.Fatal("carry ViPERBass table must report HasBassMix(otherwise antiPop not found should which two words to patch)")
 			}
 			if p.BassMixCoef < 0 || p.BassMixCoef+1 >= len(p.Coefs) {
 				t.Fatalf("BassMixCoef = %d out of range(Coefs has %d)", p.BassMixCoef, len(p.Coefs))
@@ -336,7 +336,7 @@ func TestAntiPopBassMixIndexPointsAtMixSlot(t *testing.T) {
 				t.Errorf("slot %d opcode = %d,expected %d(MIX2)", tc.mixSlotIdx, got, opMix2)
 			}
 			if got := slots[tc.mixSlotIdx].Cfb; got != p.BassMixCoef {
-				t.Errorf("slot %d coefficient base = %d,and BassMixCoef = %d -- bothmustequal",
+				t.Errorf("slot %d coefficient base = %d,and BassMixCoef = %d -- both must equal",
 					tc.mixSlotIdx, got, p.BassMixCoef)
 			}
 
@@ -367,11 +367,11 @@ func TestAntiPopSteadyStateEqualsCompiledCoefs(t *testing.T) {
 		t.Fatalf("ramp wrote nothing(%d)", len(ws))
 	}
 	if last0, last1 := ws[len(ws)-2], ws[len(ws)-1]; last0.val != p.Coefs[p.BassMixCoef] || last1.val != p.Coefs[p.BassMixCoef+1] {
-		t.Errorf("ramp end = (%d,%d),andcompiled values = (%d,%d) -- steady statemustbit-exactly equal",
+		t.Errorf("ramp end = (%d,%d),and compiled values = (%d,%d) -- steady state must bit-exactly equal",
 			last0.val, last1.val, p.Coefs[p.BassMixCoef], p.Coefs[p.BassMixCoef+1])
 	}
 	if last0 := ws[len(ws)-2]; last0.idx != p.BassMixCoef {
-		t.Errorf("rampend landed atindex %d,expected %d", last0.idx, p.BassMixCoef)
+		t.Errorf("ramp end landed at index %d,expected %d", last0.idx, p.BassMixCoef)
 	}
 
 	if got := p.Coefs[p.BassMixCoef]; got != q315Round(1.0) {
@@ -412,7 +412,7 @@ func TestAntiPopNoBassNoRamp(t *testing.T) {
 		t.Fatalf("buildSlotPlanNodes：%v", err)
 	}
 	if p.HasBassMix {
-		t.Fatal("no ViPERBass tableshould not report HasBassMix")
+		t.Fatal("no ViPERBass table should not report HasBassMix")
 	}
 	if err := dspAntiPopAfterDownload(p); err != nil {
 		t.Fatalf("off should not fail:%v", err)
@@ -427,7 +427,7 @@ func TestAntiPopNoBassNoRamp(t *testing.T) {
 	}
 	antiPopWaitIdle(t)
 	if n := len(rig.record()); n == 0 {
-		t.Error("off->onafternever wrote -- ramp never started")
+		t.Error("off->on after never wrote -- ramp never started")
 	}
 }
 

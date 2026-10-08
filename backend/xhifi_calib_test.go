@@ -72,7 +72,7 @@ func TestXHIFIMatchesOfficialCore(t *testing.T) {
 			}
 			if math.Abs(d) > tol {
 				t.Errorf("level=%g f=%g Hz:model %.2f dB vs official-core measurement %.2f dB(diff %+.2f dB > %.1f)"+
-					" -- XHIFI structure/weights/delaybroken by an edit ?see refs/viperfx_oracle/README.md",
+					" -- XHIFI structure/weights/delay broken by an edit ?see refs/viperfx_oracle/README.md",
 					level, f, got[f], table[f], d, tol)
 			}
 		}
@@ -80,7 +80,7 @@ func TestXHIFIMatchesOfficialCore(t *testing.T) {
 		t.Logf("level=%g: RMS deviation %.3f dB, worst %+.2f dB at %g Hz (%d points total)",
 			level, rms, worst, worstF, len(freqs))
 		if rms > 0.25 {
-			t.Errorf("level=%g overall RMS deviation %.3f dB toolarge(at calibration timeis 0.04 dB)", level, rms)
+			t.Errorf("level=%g overall RMS deviation %.3f dB too large(at calibration time is 0.04 dB)", level, rms)
 		}
 	}
 }

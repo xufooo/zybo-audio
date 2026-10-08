@@ -1,6 +1,7 @@
 # boot/ — how the bootable image is assembled
 
-This directory holds a **built** `BOOT.BIN`, not sources. Every input is
+This directory holds the **hashes** of the built `BOOT.BIN`, not sources.
+The binaries themselves ship as GitHub Release attachments (never in git). Every input is
 pinned in `../pins.env` so anyone can reproduce it.
 
 ## What BOOT.BIN is

@@ -14,7 +14,7 @@ func TestZZTwentyHzIsMarginallyStableBeforeFix(t *testing.T) {
 	_, _, _, a1, a2 := rbjPeakingEQ(20, 0.7, 3.5, sampleRate)
 	r := biquadPoleRadius(a1, a2)
 	if biquadStableByJury(a1, a2) {
-		t.Skipf("field already not reproduce: radius %.9f already judge stable (can can quantize path change)", r)
+		t.Skipf("field already not reproduce: radius %.9f already judge stable (may quantize path change)", r)
 	}
 	t.Logf("reproduced OK: 20 Hz/+3.5dB/Q0.7 post-quantization pole radius = %.9f, Jury judge for unstable (marginal)", r)
 }

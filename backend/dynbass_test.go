@@ -44,10 +44,10 @@ func TestDynamicBassLowPassIsV4ABiquad(t *testing.T) {
 func TestDynamicBassQMatchesSource(t *testing.T) {
 
 	if q := dynamicBassQForBass(0); q != 0.5 {
-		t.Errorf("bass=0 when Q must is 0.5 (qPeak=0), got %g", q)
+		t.Errorf("bass=0 when Q must be 0.5 (qPeak=0), got %g", q)
 	}
 	if g := dynamicBassBassGain(0); g != 1.0 {
-		t.Errorf("bass=0 when bassGain must is 1.0, got %g", g)
+		t.Errorf("bass=0 when bassGain must be 1.0, got %g", g)
 	}
 
 	wantQ := 1600.0/666.0 + 0.5
@@ -66,11 +66,11 @@ func TestDynamicBassQMatchesSource(t *testing.T) {
 	}
 
 	if qp := dynamicBassQPeak(99); qp > 1600 {
-		t.Errorf("qPeak must clamped high at in 1600 (DynamicBass.cpp:54-56), got %g", qp)
+		t.Errorf("qPeak must clamp high at 1600 (DynamicBass.cpp:54-56), got %g", qp)
 	}
 
 	if dynamicBassLPHz != 55.0 {
-		t.Errorf("lowpass cutoff must is 55 Hz, got %g", dynamicBassLPHz)
+		t.Errorf("lowpass cutoff must be 55 Hz, got %g", dynamicBassLPHz)
 	}
 }
 
@@ -142,14 +142,14 @@ func TestDynamicBassRejectsFullBranch(t *testing.T) {
 		x1, _ := dynamicBassCoeffsOf(p)
 		if x1[0] <= dynamicBassSimpleBranchMaxX1 {
 			if err != nil {
-				t.Errorf("%s: x1=%g <= 120 should compile, yet reject: %v", preset, x1[0], err)
+				t.Errorf("%s: x1=%g <= 120 should compile, yet got rejected: %v", preset, x1[0], err)
 			}
 			simple++
 			continue
 		}
 		full++
 		if err == nil {
-			t.Fatalf("%s: x1=%g > 120 via**full branch**, this machine must reject (must not fake it with an approximation)", preset, x1[0])
+			t.Fatalf("%s: x1=%g > 120 via ** full branch **, this machine must reject (must not fake it with an approximation)", preset, x1[0])
 		}
 		msg := err.Error()
 		for _, want := range []string{"full branch", "slot", "not missing hardware"} {
@@ -166,7 +166,7 @@ func TestDynamicBassRejectsFullBranch(t *testing.T) {
 	}
 	if simple != 1 || full != 9 {
 		t.Errorf("official default preset distribution change: simple branch %d / full branch %d (expect 1/9,"+
-			"arrays.xml:525-534）", simple, full)
+			"arrays.xml:525-534)", simple, full)
 	}
 
 	for _, c := range []struct {
@@ -193,21 +193,21 @@ func TestDynamicBassRejectsFullBranch(t *testing.T) {
 	p := dynamicBassDefaultParams()
 	p.Bass = 101
 	if _, err := dynamicBassValidate(p); err == nil {
-		t.Error("bass=101 exceeds client user end cap 100, should reject")
+		t.Error("bass=101 exceeds client cap 100, should reject")
 	}
 }
 
 func TestDynamicBassDefaultPresetPlanShape(t *testing.T) {
 	p := dynamicBassDefaultParams()
 	if p.Coeffs != "100;5600;40;80;50;50" || p.Bass != 0 {
-		t.Fatalf("default preset must is V4A official default (100;5600;40;80;50;50 / bass 0), got %+v", p)
+		t.Fatalf("default preset must be V4A official default (100;5600;40;80;50;50 / bass 0), got %+v", p)
 	}
 	nodes, err := dynamicBassNodes(p)
 	if err != nil {
 		t.Fatalf("default preset should compile: %v", err)
 	}
 	if len(nodes) != 1 || nodes[0].Kind != planKindDynBass {
-		t.Fatalf("should produce 1 dynbass node, got %+v", nodes)
+		t.Fatalf("should produce out 1 dynbass node, got %+v", nodes)
 	}
 	plan, err := buildSlotPlanNodes(nodes)
 	if err != nil {
@@ -249,10 +249,10 @@ func TestDynamicBassDefaultPresetPlanShape(t *testing.T) {
 		})
 	}
 	if got[0].op != opNop || got[0].n != 0 {
-		t.Errorf("slot 0 must is n=0 transport use slot (via S_DISP bypass branch), got op=%d n=%d", got[0].op, got[0].n)
+		t.Errorf("slot 0 must be n=0 transport use slot (via S_DISP bypass branch), got op=%d n=%d", got[0].op, got[0].n)
 	}
 	if got[0].outb != crossLoBus {
-		t.Errorf("slot 0 output must is cross-channel bus %d, got %d", crossLoBus, got[0].outb)
+		t.Errorf("slot 0 output must be cross-channel bus %d, got %d", crossLoBus, got[0].outb)
 	}
 	if got[1].op != opMix2 || got[1].inb != crossLoBus || got[1].outb != 1 {
 		t.Errorf("slot 1 should be MIX2(base + cross-channel -> base+1), got %+v", got[1])
@@ -278,7 +278,7 @@ func TestDynamicBassDefaultPresetPlanShape(t *testing.T) {
 	lp, _ := dynamicBassLowPassCoefs(p.Bass)
 	for i := 0; i < 5; i++ {
 		if plan.Coefs[5+i] != lp[i] {
-			t.Errorf("lowpass coefficients %d: plan plan in is %d, expect %d", i, plan.Coefs[5+i], lp[i])
+			t.Errorf("lowpass coefficients %d: plan in is %d, expect %d", i, plan.Coefs[5+i], lp[i])
 		}
 	}
 	if plan.Coefs[10] != q315Round(1.0) || plan.Coefs[11] != q315Round(1.0) {
@@ -289,11 +289,11 @@ func TestDynamicBassDefaultPresetPlanShape(t *testing.T) {
 		switch sv.op {
 		case opNop, opBiquad, opMix2:
 		default:
-			t.Errorf("slot %d use opcode %d - hard item frozen, only ready-made ones may be used OP_NOP/OP_BIQUAD/OP_MIX2", s, sv.op)
+			t.Errorf("slot %d used opcode %d - hardware frozen, only ready-made ones may be used OP_NOP/OP_BIQUAD/OP_MIX2", s, sv.op)
 		}
 	}
 	if plan.StereoFrame {
-		t.Error("simple branch**is not**joint-stereo frame pass (that is ColorfulMusic hardcoded path), should not set sf_en")
+		t.Error("simple branch ** is not ** joint-stereo frame pass (that is ColorfulMusic hardcoded path), should not set sf_en")
 	}
 }
 
@@ -375,12 +375,12 @@ func TestDynamicBassRejectsInsteadOfTruncatingWhenSlotsRunOut(t *testing.T) {
 	if err == nil {
 		t.Fatalf("slot already fully used (%d slots)+ DynamicBass %d slots must reject", limit, dynamicBassSlots)
 	}
-	if !strings.Contains(err.Error(), "slot insufficient") {
-		t.Errorf("rejection reason must spell out is slot insufficient, got: %v", err)
+	if !strings.Contains(err.Error(), "Out of slots") {
+		t.Errorf("rejection reason must make clear that it is Out of slots, got: %v", err)
 	}
 
 	if !strings.Contains(err.Error(), "4") {
-		t.Logf("(hint) slot insufficient error string: %v", err)
+		t.Logf("(hint) Out of slots error string: %v", err)
 	}
 }
 
@@ -418,7 +418,7 @@ func TestDynamicBassViewAndPersistence(t *testing.T) {
 
 	currentDynamicBass = nil
 	if dynamicBassView() != nil {
-		t.Error("off when view must is nil")
+		t.Error("view must be nil when off")
 	}
 	p := dynamicBassDefaultParams()
 	currentDynamicBass = &p
@@ -447,13 +447,13 @@ func TestDynamicBassViewAndPersistence(t *testing.T) {
 
 	note := dynamicBassBranchNote()
 	if note["needs_owner_decision"] != false {
-		t.Error("this item already decided and implemented => needs_owner_decision must is false")
+		t.Error("this item already decided and implemented => needs_owner_decision must be false")
 	}
 	if note["api_field"] != "dynamic_bass" {
-		t.Errorf("conclusion in must point new join mouth words section, got %v", note["api_field"])
+		t.Errorf("conclusion in must point new join mouth field, got %v", note["api_field"])
 	}
 	if s, _ := note["decision"].(string); !strings.Contains(s, "done") {
-		t.Errorf("conclusion must write' done (simple branch)', got %v", note["decision"])
+		t.Errorf("conclusion must write 'done (simple branch)', got %v", note["decision"])
 	}
 }
 
@@ -485,8 +485,8 @@ func TestRealChainPlusDynamicBassIsRejected(t *testing.T) {
 			t.Fatalf("%s: real chain %d slots + DynamicBass %d slots = %d slots > %d, must reject",
 				c.name, base.Slots, dynamicBassSlots, base.Slots+dynamicBassSlots, slotLimit())
 		}
-		if !strings.Contains(err.Error(), "slot insufficient") {
-			t.Errorf("%s: rejection reason must spell out is slot insufficient, got: %v", c.name, err)
+		if !strings.Contains(err.Error(), "Out of slots") {
+			t.Errorf("%s: rejection reason must make clear that it is Out of slots, got: %v", c.name, err)
 		}
 		t.Logf("%s: real chain %d slots + DynamicBass %d slots => reject (%v)",
 			c.name, base.Slots, dynamicBassSlots, err)
@@ -502,7 +502,7 @@ func TestRealChainPlusDynamicBassIsRejected(t *testing.T) {
 	if plan.Slots != 2+dynamicBassSlots {
 		t.Errorf("small chain slot count = %d, expect %d", plan.Slots, 2+dynamicBassSlots)
 	}
-	t.Logf("small chain (ViPERBass 2 slot + DynamicBass %d slots)= %d slots, compiles OK", dynamicBassSlots, plan.Slots)
+	t.Logf("small chain (ViPERBass 2 slot + DynamicBass %d slots) = %d slots, compiles OK", dynamicBassSlots, plan.Slots)
 
 	baseCost := chainFrameCost(37, true, true, false, false, 22)
 	withCost := chainFrameCost(37+dynamicBassSections, true, true, false, false,

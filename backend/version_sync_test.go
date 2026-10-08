@@ -10,7 +10,7 @@ import (
 func TestVersionFileMatchesAppVersion(t *testing.T) {
 	b, err := os.ReadFile("../VERSION")
 	if err != nil {
-		t.Fatalf("read not to repo store root VERSION: %v (test must from backend/ run)", err)
+		t.Fatalf("cannot read repo root VERSION: %v (tests must run from backend/)", err)
 	}
 	want := strings.TrimSpace(string(b))
 	if want == "" {

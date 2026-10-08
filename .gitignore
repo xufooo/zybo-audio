@@ -21,3 +21,8 @@ NA/
 *.irs
 *.vdc
 *.json.bak
+# Binaries ship via GitHub Releases, never in git
+*.bin
+BOOT.BIN
+system.bit
+zybo-audio-web

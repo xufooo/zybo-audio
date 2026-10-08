@@ -190,7 +190,7 @@ func dspAdoptHardwareCaps() {
 func adoptCapsFrom(caps dspEngineCaps) {
 	if n := caps.NumSections; n > 0 {
 		if n < hwMaxSections {
-			log.Printf("⚠️ Bitstream reports NSEC=%d, is below the backend section cap %d => **tightened to %d**"+
+			log.Printf("⚠️ Bitstream reports NSEC=%d, is below the backend section cap %d => ** tightened to %d **"+
 				"(new-backend/old-bitstream silent coefficient-drop case, hardware wins)",
 				n, hwMaxSections, n)
 		}
@@ -678,7 +678,7 @@ func buildSlotPlanNodes(nodes []planNode) (slotPlan, error) {
 	}
 	if sections > hwMaxSections {
 		return p, newCapacityError("sections", sections, hwMaxSections,
-			"Chain too long: %d sections (incl. DYN detection bandpass)> engine limit %d sections, will not truncate",
+			"Chain too long: %d sections (incl. DYN detection bandpass) > engine limit %d sections, will not truncate",
 			sections, hwMaxSections)
 	}
 
@@ -736,7 +736,7 @@ func buildSlotPlanNodes(nodes []planNode) (slotPlan, error) {
 		}
 		if delayUsed+L > hwDelayWords {
 			return 0, fmt.Errorf("Delay ring too small: allocated %d words + this slot %d words > per-channel ring capacity %d words"+
-				"(%.1f ms @48k) - multiple delay slots **share one ring**",
+				"(%.1f ms @48k) - multiple delay slots ** share one ring **",
 				delayUsed, L, hwDelayWords, float64(hwDelayWords)/48.0)
 		}
 		off := delayUsed
@@ -1053,7 +1053,7 @@ func buildSlotPlanNodes(nodes []planNode) (slotPlan, error) {
 			n := nodes[i]
 
 			if hwSFIRMaxTaps < sfirTaps {
-				return p, fmt.Errorf("ViPERBass Pure Bass+ needs **%d-tap small FIR**"+
+				return p, fmt.Errorf("ViPERBass Pure Bass+ needs **%d-tap small FIR **"+
 					"(that is the official core' s dry path, not bypass), but this bitstream' s small-FIR cap is %d:"+
 					"CAP1 bit7 (has OP_SFIR) and CAP4 (capacity) must both be set", sfirTaps, hwSFIRMaxTaps)
 			}

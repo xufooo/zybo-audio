@@ -27,7 +27,7 @@ func exciterWetScale(p exciterParams) float64 {
 
 func validateExciterMix(p exciterParams) error {
 	if p.Mix < 0 {
-		return fmt.Errorf("harmonicexciter mix cannotbe negative(got %.3f)", p.Mix)
+		return fmt.Errorf("harmonic exciter mix cannot be negative(got %.3f)", p.Mix)
 	}
 	wet := p.Mix / exciterWetScale(p)
 	limit := maxMixQ315 * maxMixQ315
@@ -108,7 +108,7 @@ func harmonicQ315(p exciterParams) ([12]int32, error) {
 	}
 	for i, a := range p.Harmonics {
 		if math.IsNaN(a) || math.IsInf(a, 0) {
-			return [12]int32{}, fmt.Errorf("harmonic %damplitudeis notfinite number", i+1)
+			return [12]int32{}, fmt.Errorf("harmonic %damplitude is not finite number", i+1)
 		}
 		if math.Abs(a) > 1.0 {
 			return [12]int32{}, fmt.Errorf("harmonic %d amplitude %.4f exceeds 1.0 (decide how much you want before normalizing)", i+1, a)

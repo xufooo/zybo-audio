@@ -27,7 +27,7 @@ func TestViPERBassModeGating(t *testing.T) {
 		t.Errorf("default gear should be Natural Bass / 40 Hz / 50 (V4A client getString default string), got %+v", p)
 	}
 	if err := viperBassValidate(p); err != nil {
-		t.Errorf("default parametersshould validate:%v", err)
+		t.Errorf("default parameters should validate:%v", err)
 	}
 
 	p.Mode = viperBassModePBP
@@ -41,7 +41,7 @@ func TestViPERBassModeGating(t *testing.T) {
 
 	p.Mode = viperBassModeSubwoofer
 	if err := viperBassValidate(p); err == nil {
-		t.Error("Subwoofer gearnot implemented,must fail")
+		t.Error("Subwoofer gear not implemented,must fail")
 	}
 
 	p.Mode = 3
@@ -52,7 +52,7 @@ func TestViPERBassModeGating(t *testing.T) {
 	p = viperBassDefaultParams()
 	p.CutoffHz = 20
 	if err := viperBassValidate(p); err == nil {
-		t.Error("cutoff 20 Hz not inpanel gears (30...100),must fail")
+		t.Error("cutoff 20 Hz not in panel gears (30...100),must fail")
 	}
 	p = viperBassDefaultParams()
 	p.Gain = 700
@@ -71,10 +71,10 @@ func TestViPERBassSlotPlan(t *testing.T) {
 	}
 	slots := decodeSlots(t, plan)
 	if len(slots) != 2 {
-		t.Fatalf("decoded %d slotsdescriptor,expected 2", len(slots))
+		t.Fatalf("decoded %d slots descriptor,expected 2", len(slots))
 	}
 	if slots[0].Op != opBiquad || slots[0].N != 2 {
-		t.Errorf("slot 0should be 2 sectionspacked BIQUAD,got op=%d n=%d", slots[0].Op, slots[0].N)
+		t.Errorf("slot 0should be 2 sections packed BIQUAD,got op=%d n=%d", slots[0].Op, slots[0].N)
 	}
 	if slots[0].In != 0 || slots[0].Out != 1 {
 		t.Errorf("slot 0 should be bus0 -> bus1, got %d -> %d", slots[0].In, slots[0].Out)
@@ -89,7 +89,7 @@ func TestViPERBassSlotPlan(t *testing.T) {
 	}
 
 	if len(plan.Coefs) != 15 {
-		t.Errorf("coefficientword count = %d,expected 15(2 sections x5 + MIX2 weights 2valid words)", len(plan.Coefs))
+		t.Errorf("coefficient word count = %d,expected 15(2 sections x5 + MIX2 weights 2valid words)", len(plan.Coefs))
 	}
 }
 
@@ -105,11 +105,11 @@ func TestViPERBassPreScaleIsRequired(t *testing.T) {
 	q := viperBassPlan(t, viperBassDefaultParams())
 	pre := [5]int32{q.Coefs[0], q.Coefs[1], q.Coefs[2], q.Coefs[3], q.Coefs[4]}
 	if pre[0] != 1024 {
-		t.Errorf("scaling sectioncoefficientshould be 1/32 = 1024,got %d", pre[0])
+		t.Errorf("scaling section coefficient should be 1/32 = 1024,got %d", pre[0])
 	}
 	lp := [5]int32{q.Coefs[5], q.Coefs[6], q.Coefs[7], q.Coefs[8], q.Coefs[9]}
 	if lp[0] == 0 || lp[1] == 0 || lp[2] == 0 {
-		t.Errorf("after scalinglow-pass numeratorstillis 0(%v)-- effect would vanish entirely", lp)
+		t.Errorf("after scaling low-pass numerator still is 0(%v)-- effect would vanish entirely", lp)
 	}
 }
 
@@ -119,7 +119,7 @@ func TestViPERBassGainConvention(t *testing.T) {
 	p0.Gain = 0
 	z := viperBassPlan(t, p0)
 	if z.Coefs[11] != 0 {
-		t.Errorf("gain=0 wet weightshould be 0(bassFactor=gain/100),got %d", z.Coefs[11])
+		t.Errorf("gain=0 wet weight should be 0(bassFactor=gain/100),got %d", z.Coefs[11])
 	}
 
 	for _, c := range []struct {
@@ -146,7 +146,7 @@ func TestViPERBassMaxGainPlanBytes(t *testing.T) {
 	p := viperBassParams{Mode: viperBassModeNatural, CutoffHz: 60, Gain: 600}
 	plan := viperBassPlan(t, p)
 	if len(plan.Coefs) != 15 {
-		t.Fatalf("coefficientword count = %d,expected 15", len(plan.Coefs))
+		t.Fatalf("coefficient word count = %d,expected 15", len(plan.Coefs))
 	}
 	wantPre := []int32{1024, 0, 0, 0, 0}
 	wantLP := []int32{24, 48, 24, -65052, 32286}
@@ -167,10 +167,10 @@ func TestViPERBassMaxGainPlanBytes(t *testing.T) {
 		}
 	}
 	if plan.Coefs[5] == 0 || plan.Coefs[6] == 0 || plan.Coefs[7] == 0 {
-		t.Errorf("low-pass numeratorquantized to 0 => wet stays 0('no effect' classic cause):%v", plan.Coefs[5:8])
+		t.Errorf("low-pass numerator quantized to 0 => wet stays 0('no effect' classic cause):%v", plan.Coefs[5:8])
 	}
 	if plan.Coefs[11] <= 0 {
-		t.Errorf("MIX2 wet weight = %d,mustbe positive", plan.Coefs[11])
+		t.Errorf("MIX2 wet weight = %d,must be positive", plan.Coefs[11])
 	}
 
 	wetDC := float64(plan.Coefs[11]) / 32768.0 *
@@ -178,7 +178,7 @@ func TestViPERBassMaxGainPlanBytes(t *testing.T) {
 		float64(32768+plan.Coefs[8]+plan.Coefs[9]) *
 		(float64(plan.Coefs[0]) / 32768.0)
 	if math.Abs(wetDC-6.0) > 0.06 {
-		t.Errorf("gain=600 equivalent wet multiple = %.4f,expected 6.0 ± 0.06(= gain/100;folded multiplemustactually multiplied)",
+		t.Errorf("gain=600 equivalent wet multiple = %.4f,expected 6.0 ± 0.06(= gain/100;folded multiple must actually multiplied)",
 			wetDC)
 	}
 	if d := 20 * math.Log10((1+wetDC)/7.0); math.Abs(d) > 0.2 {
@@ -223,7 +223,7 @@ func TestViPERBassMatchesOfficialCore(t *testing.T) {
 				c.gain, c.freq, got, want, d)
 		}
 	}
-	t.Logf("ViPERBass NATURAL andofficial core max deviation %.2f dB(at %s)", worst, worstAt)
+	t.Logf("ViPERBass NATURAL and official core max deviation %.2f dB(at %s)", worst, worstAt)
 }
 
 func fmtGainFreq(gain, freq float64) string {
@@ -253,10 +253,10 @@ func TestViPERBassChainOrder(t *testing.T) {
 		}
 	}
 	if bassAt < 0 {
-		t.Fatal("in chainno ViPERBass node")
+		t.Fatal("in chain no ViPERBass node")
 	}
 	if clarAt < 0 {
-		t.Fatal("in chainno Clarity sections")
+		t.Fatal("in chain no Clarity sections")
 	}
 	if bassAt > clarAt {
 		t.Errorf("ViPERBass must come before Clarity (V4A Fidelity Control order), got %d > %d",
@@ -291,7 +291,7 @@ func TestViPERBassFitsRealChain(t *testing.T) {
 	nodes, err := buildChainNodesWithBass(secs, &dynParams{GainDB: 6, RefDB: -25, KS: 0.75, AttMs: 5, RelMs: 200},
 		currentCrossfeed, nil, currentViPERBass)
 	if err != nil {
-		t.Fatalf("ViPERBass + exciter + DYN + convolution + OZONE + crossfeed + 8 sections EQ shouldfit:%v", err)
+		t.Fatalf("ViPERBass + exciter + DYN + convolution + OZONE + crossfeed + 8 sections EQ should fit:%v", err)
 	}
 	plan, err := buildSlotPlanNodes(nodes)
 	if err != nil {
@@ -315,7 +315,7 @@ func TestViPERBassFitsRealChain(t *testing.T) {
 	}
 	bassPlan := viperBassPlan(t, b)
 	if bassPlan.Slots != 2 || bassPlan.Sections != 3 {
-		t.Errorf("ViPERBass itselfshould take 2 slots 3 sections,got %d slots %d sections", bassPlan.Slots, bassPlan.Sections)
+		t.Errorf("ViPERBass itself should take 2 slots 3 sections,got %d slots %d sections", bassPlan.Slots, bassPlan.Sections)
 	}
 }
 
@@ -331,17 +331,17 @@ func TestViPERBassPBPMeasuredSpec(t *testing.T) {
 		}
 	}
 	if argmax != 31 {
-		t.Errorf("PBP dry-path main tapatitem %d,measuredisitem 31(output frame 286 frame = 255+31)", argmax)
+		t.Errorf("PBP dry-path main tap at item %d,measured is item 31(output frame 286 frame = 255+31)", argmax)
 	}
 	if db := 20 * math.Log10(sum); math.Abs(db+13.85) > 0.05 {
 		t.Errorf("PBP dry-path DC gain %.4f(%+.2f dB),measured −13.85 dB -- "+
 			"once this number changes, the direct+delayed-wet substitute error (8.4 dB at 30 Hz) must be recomputed", sum, db)
 	}
 	if len(k) != viperBassPBPKernelLen || viperBassPBPKernelLen != 63 {
-		t.Errorf("dry-path kernelshould be 63 taps(measured),got %d", len(k))
+		t.Errorf("dry-path kernel should be 63 taps(measured),got %d", len(k))
 	}
 	if viperBassPBPWetDelay != 64 {
-		t.Errorf("wet delaymeasured as 64 samples(aligned RMS=0.0;63/65 are both 0.59),constant is %d",
+		t.Errorf("wet delay measured as 64 samples(aligned RMS=0.0;63/65 are both 0.59),constant is %d",
 			viperBassPBPWetDelay)
 	}
 
@@ -350,22 +350,22 @@ func TestViPERBassPBPMeasuredSpec(t *testing.T) {
 		t.Fatalf("PBP should compile now (the hardware gate is in setViPERBass/compiler): %v", err)
 	}
 	if len(nodes) != 1 || nodes[0].Kind != planKindViPERBassPBP {
-		t.Fatalf("PBP shouldbe compiled intoone planKindViPERBassPBP node,got %+v", nodes)
+		t.Fatalf("PBP should be compiled into onee planKindViPERBassPBP node,got %+v", nodes)
 	}
 	if nodes[0].Len != viperBassPBPWetDelay {
-		t.Errorf("PBP node wet delay = %d,measuredis %d", nodes[0].Len, viperBassPBPWetDelay)
+		t.Errorf("PBP node wet delay = %d,measured is %d", nodes[0].Len, viperBassPBPWetDelay)
 	}
 	if len(nodes[0].SFir) != sfirTaps {
-		t.Fatalf("dry-path tapsshouldbe padded out to sfirTaps=%d(63kernel + h[63]=0),got %d",
+		t.Fatalf("dry-path taps should be padded out to sfirTaps=%d(63kernel + h[63]=0),got %d",
 			sfirTaps, len(nodes[0].SFir))
 	}
 	if nodes[0].SFir[63] != 0 {
-		t.Errorf("tap 64must always be 0(itispadding entry,is notpart of the kernel),got %d", nodes[0].SFir[63])
+		t.Errorf("tap 64must always be 0(it is padding entry,is not part of the kernel),got %d", nodes[0].SFir[63])
 	}
 
 	for i, v := range k {
 		if got := float64(nodes[0].SFir[i]) / 32768.0; math.Abs(got-v) > 0.5/32768.0 {
-			t.Errorf("PBP taps %d Q3.15 andkernel mismatch:%d(%.6f)vs %.6f",
+			t.Errorf("PBP taps %d Q3.15 and kernel mismatch:%d(%.6f)vs %.6f",
 				i, nodes[0].SFir[i], got, v)
 		}
 	}

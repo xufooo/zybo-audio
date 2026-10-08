@@ -86,7 +86,7 @@ func TestHarmonicNormalisationBounded(t *testing.T) {
 		}
 	}
 	if worst > 1.0+1e-9 {
-		t.Errorf("|p| most large value %.6f > 1: normalization not applied (hard item per |p|<=1 scaling)", worst)
+		t.Errorf("|p| maximum %.6f > 1: normalization not applied (hardware scales by |p|<=1 scaling)", worst)
 	}
 	t.Logf("Σ|a|=10 when |p|max = %.6f (normalization should <=1)", worst)
 }
@@ -95,7 +95,7 @@ func TestHarmonicQ315FitsQ315Range(t *testing.T) {
 	p := exciterDefaultParams()
 	c := harmonicMonomialCoeffs(p.Harmonics)
 	if mx := polyMaxCoef(c); mx <= 3.9 {
-		t.Fatalf("this test group max coefficient %.3f not exceeding Q3.15 cap, measure not to scaling path", mx)
+		t.Fatalf("this test group max coefficient %.3f not exceeding Q3.15 cap, cannot cover the scaling path", mx)
 	}
 	nodes, err := exciterNodes(p)
 	if err != nil {
@@ -103,7 +103,7 @@ func TestHarmonicQ315FitsQ315Range(t *testing.T) {
 	}
 	for i := 0; i < 11; i++ {
 		if v := nodes[0].Poly[i]; v > 131071 || v < -131072 {
-			t.Errorf("%d single-wing coefficients %d exceeds Q3.15 (18 bit has symbol number) range", i, v)
+			t.Errorf("%d single-wing coefficients %d exceeds Q3.15 (18 bit signed) range", i, v)
 		}
 	}
 
@@ -171,9 +171,9 @@ func TestHarmonicFixedPointMatchesFloat(t *testing.T) {
 	}
 
 	if worst > 64 {
-		t.Errorf("fixed-point vs floating-point most large deviation %.1f LSB (24 bit)> 64 LSB, fixed-point path broken", worst)
+		t.Errorf("fixed-point vs floating-point maximum deviation %.1f LSB (24 bit) > 64 LSB, fixed-point path broken", worst)
 	}
-	t.Logf("fixed-point vs floating-point most large deviation = %.1f LSB (24 bit, ~= %.1f dBFS)",
+	t.Logf("fixed-point vs floating-point maximum deviation = %.1f LSB (24 bit, ~= %.1f dBFS)",
 		worst, 20*math.Log10(worst/float64(int64(1)<<23)))
 }
 
@@ -181,20 +181,20 @@ func TestExciterCompilesToFourSlots(t *testing.T) {
 	p := exciterDefaultParams()
 	nodes, err := exciterNodes(p)
 	if err != nil {
-		t.Fatalf("exciterNodes：%v", err)
+		t.Fatalf("exciterNodes: %v", err)
 	}
 	if len(nodes) != 1 || nodes[0].Kind != planKindExciter {
-		t.Fatalf("exciter should compile 1 exciter node, actual %d", len(nodes))
+		t.Fatalf("exciter should compile into 1 exciter node, actual %d", len(nodes))
 	}
 	plan, err := buildSlotPlanNodes(nodes)
 	if err != nil {
-		t.Fatalf("buildSlotPlanNodes：%v", err)
+		t.Fatalf("buildSlotPlanNodes: %v", err)
 	}
 	if plan.Slots != 4 {
-		t.Errorf("should compile 4 slot (HPF/POLY/LPF/MIX2), actual %d", plan.Slots)
+		t.Errorf("should compile out 4 slots (HPF/POLY/LPF/MIX2), actual %d", plan.Slots)
 	}
 	if plan.Sections != 3 {
-		t.Errorf("should take 3 state section (HPF/POLY/LPF), actual %d", plan.Sections)
+		t.Errorf("should take 3 state sections (HPF/POLY/LPF), actual %d", plan.Sections)
 	}
 	word := func(slot, off int) uint32 {
 		for _, w := range plan.Words {
@@ -232,14 +232,14 @@ func TestExciterCompilesToFourSlots(t *testing.T) {
 	}
 
 	if inB := word(3, swInB); inB == crossLoBus || inB >= crossLoBus {
-		t.Errorf("MIX2 in_b = %d collide with protect leave bus number", inB)
+		t.Errorf("MIX2 in_b = %d collide with reserved bus number", inB)
 	}
 
 	if len(plan.Coefs) < 27 {
 		t.Errorf("total coefficients %d < 27 (HPF5+POLY12+LPF5+MIX5)", len(plan.Coefs))
 	}
 	if plan.Coefs[5+11] != int32(exciterMuteSamples(p)) {
-		t.Errorf("POLY most one coefficients (anti-pop length)= %d, expect %d",
+		t.Errorf("POLY last coefficients (anti-pop length) = %d, expect %d",
 			plan.Coefs[5+11], exciterMuteSamples(p))
 	}
 }
@@ -248,7 +248,7 @@ func TestChainOverflowIsReported(t *testing.T) {
 	p := exciterDefaultParams()
 	ex, err := exciterNodes(p)
 	if err != nil {
-		t.Fatalf("exciterNodes：%v", err)
+		t.Fatalf("exciterNodes: %v", err)
 	}
 
 	xhifiWithDelaySlots(t, 8, func() {
@@ -263,7 +263,7 @@ func TestChainOverflowIsReported(t *testing.T) {
 		full := append([]planNode{one, one}, fir(8)...)
 		plan, err := buildSlotPlanNodes(full)
 		if err != nil {
-			t.Fatalf("2 XHIFI + 8 convolution (24 slot = NSLOT) should fit, yet reject: %v", err)
+			t.Fatalf("2 XHIFI + 8 convolution (24 slots = NSLOT) should fit, yet got rejected: %v", err)
 		}
 		if plan.Slots != dspSlotMax {
 			t.Fatalf("slot count = %d, expect %d (= dspSlotMax)", plan.Slots, dspSlotMax)
@@ -283,7 +283,7 @@ func TestChainOverflowIsReported(t *testing.T) {
 
 	busHeavy := []planNode{ex[0], ex[0], ex[0], ex[0], ex[0], ex[0]}
 	if _, err := buildSlotPlanNodes(busHeavy); err == nil {
-		t.Fatalf("bus peak %d compiled when it should not have - must error (%d/%d is protect leave number)",
+		t.Fatalf("bus peak %d compiled when it should not have - must error (%d/%d is reserved number)",
 			4*len(busHeavy)+4, crossLoBus, dynScratchBus)
 	} else {
 		t.Logf("errors as expected: %v", err)
@@ -298,7 +298,7 @@ func TestFullChainFitsAfterCapacityExpansion(t *testing.T) {
 	p := exciterDefaultParams()
 	ex, err := exciterNodes(p)
 	if err != nil {
-		t.Fatalf("exciterNodes：%v", err)
+		t.Fatalf("exciterNodes: %v", err)
 	}
 	nodes := append([]planNode{}, ex...)
 	for _, s := range ddc {
@@ -307,7 +307,7 @@ func TestFullChainFitsAfterCapacityExpansion(t *testing.T) {
 	nodes = append(nodes, planNode{Kind: planKindFIR, Blocks: firTaps / firMACS})
 	plan, err := buildSlotPlanNodes(nodes)
 	if err != nil {
-		t.Fatalf("chain should fit after expansion, yet reject: %v", err)
+		t.Fatalf("chain should fit after expansion, yet got rejected: %v", err)
 	}
 	if plan.Slots != 11 {
 		t.Errorf("slot count = %d, expect 11 (exciter 4 + DDC 6 + convolution 1)", plan.Slots)
@@ -316,7 +316,7 @@ func TestFullChainFitsAfterCapacityExpansion(t *testing.T) {
 		t.Errorf("section count = %d, expect 19 (DDC 16 + exciter HPF/LPF 2 + POLY state 1)", plan.Sections)
 	}
 	if plan.Slots > dspSlotMax || plan.Sections > maxSections {
-		t.Errorf("plan plan %d slots / %d sections exceeds dspSlotMax=%d / maxSections=%d",
+		t.Errorf("plan %d slots / %d sections exceeds dspSlotMax=%d / maxSections=%d",
 			plan.Slots, plan.Sections, dspSlotMax, maxSections)
 	}
 }
@@ -335,7 +335,7 @@ func TestExciterMixRangeIsEnforced(t *testing.T) {
 
 	scale := exciterWetScale(p)
 	if scale >= 1.0 {
-		t.Fatalf("VSE factory shape single-wing coefficients most large 10.24 > 3.9 => must overall scale small, got scale=%.4f", scale)
+		t.Fatalf("VSE factory shape single-wing coefficients maximum 10.24 > 3.9 => must overall scale down, got scale=%.4f", scale)
 	}
 	for _, mix := range []float64{maxMixQ315, 4.48, 5.04, 5.6} {
 		q := p
@@ -354,11 +354,11 @@ func TestExciterMixRangeIsEnforced(t *testing.T) {
 
 	q.Mix = 15.9
 	if err := validateExciterMix(q); err != nil {
-		t.Errorf("mix=15.9 in' MIX2 4.0 x gain stage 4.0' within, should not reject: %v", err)
+		t.Errorf("mix=15.9 in 'MIX2 4.0 x gain stage 4.0' within, should not reject: %v", err)
 	}
 	q.Mix = 16.1
 	if err := validateExciterMix(q); err == nil {
-		t.Error("not scaling when mix=16.1 exceeds' MIX2 4.0 x gain stage 4.0' expressible range, must error is not saturate")
+		t.Error("not scaling when mix=16.1 exceeds 'MIX2 4.0 x gain stage 4.0' expressible range, must error and not saturate")
 	} else {
 		t.Logf("rejected as expected: %v", err)
 	}
@@ -391,7 +391,7 @@ func TestChainOrderMatchesJamesDSP(t *testing.T) {
 
 	nodes, err := buildChainNodes(sections, dyn, cross, sur)
 	if err != nil {
-		t.Fatalf("buildChainNodes：%v", err)
+		t.Fatalf("buildChainNodes: %v", err)
 	}
 
 	var seq []string
@@ -402,7 +402,7 @@ func TestChainOrderMatchesJamesDSP(t *testing.T) {
 	}
 	want := []string{planKindDyn, planKindBiquad, planKindFIR, planKindBiquad, planKindCross, planKindDelay}
 	if len(seq) != len(want) {
-		t.Fatalf("chain order = %v, expect %v (dyn-> EQ-> convolution-> DDC-> cross-> surround)", seq, want)
+		t.Fatalf("chain order = %v, expect %v (dyn->EQ->convolution->DDC->cross->surround)", seq, want)
 	}
 	for i := range want {
 		if seq[i] != want[i] {

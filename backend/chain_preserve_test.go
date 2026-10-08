@@ -21,7 +21,7 @@ func TestChainPutKeepsConvolverAndDDC(t *testing.T) {
 	got := preserveResourceChainItems(incoming, existing)
 
 	if len(got) != 4 {
-		t.Fatalf("resultshould have 4 items(2 EQ + convolution + DDC),got %d:%+v", len(got), got)
+		t.Fatalf("result should have 4 items(2 EQ + convolution + DDC),got %d:%+v", len(got), got)
 	}
 
 	if !reflect.DeepEqual(got[0], incoming[0]) || !reflect.DeepEqual(got[1], incoming[1]) {
@@ -41,13 +41,13 @@ func TestChainPutKeepsConvolverAndDDC(t *testing.T) {
 		t.Fatal("convolver chain item lost -- this is exactly the bug this test exists to catch (one panel edit would lose it)")
 	}
 	if haveFIR.Name != "thepbone-clear_bass.irs" {
-		t.Errorf("convolution IR namenot kept:%q", haveFIR.Name)
+		t.Errorf("convolution IR name not kept:%q", haveFIR.Name)
 	}
 	if haveDDC == nil {
-		t.Fatal("DDC chain itemlost -- same as above")
+		t.Fatal("DDC chain item lost -- same as above")
 	}
 	if haveDDC.Name != "mh750.vdc" || haveDDC.Params["sections"] != 18 {
-		t.Errorf("DDC name/section countnot kept:%+v", *haveDDC)
+		t.Errorf("DDC name/section count not kept:%+v", *haveDDC)
 	}
 }
 
@@ -70,7 +70,7 @@ func TestChainPutExplicitResourceItemWins(t *testing.T) {
 		case "ir":
 			fir++
 			if it.Name != "new.irs" {
-				t.Errorf("should usein request IR(new.irs),got %q", it.Name)
+				t.Errorf("should use in request IR(new.irs),got %q", it.Name)
 			}
 		case "ddc":
 			ddc++
@@ -80,10 +80,10 @@ func TestChainPutExplicitResourceItemWins(t *testing.T) {
 		}
 	}
 	if fir != 1 {
-		t.Errorf("convolver chain itemshouldexactly 1(request wins),got %d", fir)
+		t.Errorf("convolver chain items should exactly 1(request wins),got %d", fir)
 	}
 	if ddc != 1 {
-		t.Errorf("DDC shouldexactly 1(carried over from the old chain),got %d", ddc)
+		t.Errorf("DDC should exactly 1(carried over from the old chain),got %d", ddc)
 	}
 }
 
@@ -91,7 +91,7 @@ func TestChainPutPreserveNoopOnEmptyExisting(t *testing.T) {
 	in := []ChainItem{{Type: "peq", Enabled: true, Freq: 1000, GainDB: 1, Q: 1}}
 	got := preserveResourceChainItems(in, nil)
 	if !reflect.DeepEqual(got, in) {
-		t.Errorf("old chain is emptyshouldreturn as-is,got %+v", got)
+		t.Errorf("old chain is empty should return as-is,got %+v", got)
 	}
 }
 
@@ -99,8 +99,8 @@ func TestResourceChainKindsCoverExactlyFieldlessEffects(t *testing.T) {
 	want := map[string]bool{"fir": true, "ddc": true}
 	if !reflect.DeepEqual(resourceChainKinds, want) {
 		t.Fatalf("resourceChainKinds = %v,expected %v -- "+
-			"adding a new kind ofchain-item effect,must explicitly decideitwhether it hasrequest fields:"+
-			"nofield (only viastandalone endpoint switch)mustadded in,otherwiseagainwillrepeat"+
+			"adding a new kind of chain-item effect,must explicitly decide it whether it has request fields:"+
+			"no field (only via standalone endpoint switch)must added in,otherwise again will repeat"+
 			"editing EQ silently deletes it", resourceChainKinds, want)
 	}
 
@@ -116,7 +116,7 @@ func TestResourceChainKindsCoverExactlyFieldlessEffects(t *testing.T) {
 
 	for _, k := range []string{"crossfeed", "surround", "tube"} {
 		if resourceChainKinds[k] {
-			t.Errorf("%q hasrequest fields(covered by field semantics),must not enter resourceChainKinds", k)
+			t.Errorf("%q has request fields(covered by field semantics),must not enter resourceChainKinds", k)
 		}
 	}
 }

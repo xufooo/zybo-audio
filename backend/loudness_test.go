@@ -35,7 +35,7 @@ func TestLoudnessFollowsVolume(t *testing.T) {
 	withVolume(t, -20, func() {
 		loudnessRefOffsetDB = 15
 		if got := loudnessAmount(); math.Abs(got-1.75) > 0.05 {
-			t.Errorf("offset 15 when -20 dB should only boost 1.75 dB (content itself enough sound), actual %.2f", got)
+			t.Errorf("offset 15 when -20 dB should only boost 1.75 dB (content is already loud enough), actual %.2f", got)
 		}
 		loudnessRefOffsetDB = 5
 		if got := loudnessAmount(); math.Abs(got-5.25) > 0.05 {
@@ -45,7 +45,7 @@ func TestLoudnessFollowsVolume(t *testing.T) {
 	withVolume(t, -60, func() {
 
 		if got := loudnessAmount(); math.Abs(got-loudnessMaxBoostDB) > 0.01 {
-			t.Errorf("minimum volume should capped at %.1f dB, actual %.2f", loudnessMaxBoostDB, got)
+			t.Errorf("minimum volume should be capped at %.1f dB, actual %.2f", loudnessMaxBoostDB, got)
 		}
 	})
 

@@ -177,7 +177,7 @@ func TestRuntimeStateCorruptFileIsNotFatal(t *testing.T) {
 	resetRuntimeGlobals()
 	restoreRuntimeState()
 	if selectedTypeName != "" || currentDynBass != nil || chainGainDB != 0 {
-		t.Error("bad file when should not change move run when state")
+		t.Error("bad file when should not modify runtime state")
 	}
 }
 
@@ -192,14 +192,14 @@ func TestRuntimeStateFormatMismatch(t *testing.T) {
 	resetRuntimeGlobals()
 	restoreRuntimeState()
 	if selectedTypeName != "" {
-		t.Errorf("format unrecognized when should not apply use file in type name, actual %q", selectedTypeName)
+		t.Errorf("format unrecognized when should not apply file in type name, actual %q", selectedTypeName)
 	}
 }
 
 func TestRuntimeStateMissingFile(t *testing.T) {
 	withStateFile(t)
 	if _, ok, err := loadRuntimeState(); ok || err != nil {
-		t.Errorf("missing file should be 'missing' is not error: ok=%v err=%v", ok, err)
+		t.Errorf("file not store in should be 'missing', not an error: ok=%v err=%v", ok, err)
 	}
 }
 
@@ -216,7 +216,7 @@ func TestMarkStateDirtyCoalesces(t *testing.T) {
 		markStateDirty()
 	}
 	if _, err := os.Stat(p); err == nil {
-		t.Error("wrote before the coalescing window elapsed (should be 2 later before writing)")
+		t.Error("wrote before the coalescing window elapsed (should only be written after 2 seconds)")
 	}
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
@@ -233,7 +233,7 @@ func TestMarkStateDirtyCoalesces(t *testing.T) {
 	time.Sleep(120 * time.Millisecond)
 	fi2, _ := os.Stat(p)
 	if !fi1.ModTime().Equal(fi2.ModTime()) {
-		t.Error("5 mark should merge and 1 write, actually wrote multiple times")
+		t.Error("5 mark should merge into 1 write, actually wrote multiple times")
 	}
 }
 
@@ -244,7 +244,7 @@ func TestVolumeDefaultAndPersist(t *testing.T) {
 	currentVolume = 90
 	applyRuntimeState(runtimeState{}, true, true, true, true, true)
 	if currentVolume != 90 {
-		t.Errorf("no volume words section when should protect hold default 90, actual %d", currentVolume)
+		t.Errorf("no volume field when should keep default 90, actual %d", currentVolume)
 	}
 
 	applyRuntimeState(runtimeState{Volume: 65}, true, true, true, true, true)

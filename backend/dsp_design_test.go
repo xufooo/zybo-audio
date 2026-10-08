@@ -50,7 +50,7 @@ func TestPresetBandsStableAndInRange(t *testing.T) {
 				want = sc.GainDB / 2
 			}
 			if got := magDB(b0, b1, b2, a1, a2, sc.Freq); math.Abs(got-want) > 0.6 {
-				t.Errorf("preset %s %d sections %+v: %.0fHz respond %.2f dB, expect %.2f dB",
+				t.Errorf("preset %s %d sections %+v: %.0fHz responds at %.2f dB, expect %.2f dB",
 					name, i+1, sc, sc.Freq, got, want)
 			}
 		}
@@ -61,18 +61,18 @@ func TestShelfDirection(t *testing.T) {
 	for _, g := range []float64{6, -6} {
 		b0, b1, b2, a1, a2 := design(t, slotConfig{Type: "HS", Freq: 1000, Q: 0.7, GainDB: g})
 		if got := magDB(b0, b1, b2, a1, a2, 20000); math.Abs(got-g) > 1.0 {
-			t.Errorf("high rack %+.0fdB @1k: 20kHz %.2f dB, should~=%.0f", g, got, g)
+			t.Errorf("high shelf %+.0fdB @1k: 20kHz %.2f dB, should~=%.0f", g, got, g)
 		}
 		if got := magDB(b0, b1, b2, a1, a2, 50); math.Abs(got) > 1.0 {
-			t.Errorf("high rack %+.0fdB @1k: 50Hz %.2f dB, should~=0", g, got)
+			t.Errorf("high shelf %+.0fdB @1k: 50Hz %.2f dB, should~=0", g, got)
 		}
 
 		b0, b1, b2, a1, a2 = design(t, slotConfig{Type: "LS", Freq: 1000, Q: 0.7, GainDB: g})
 		if got := magDB(b0, b1, b2, a1, a2, 50); math.Abs(got-g) > 1.0 {
-			t.Errorf("low rack %+.0fdB @1k: 50Hz %.2f dB, should~=%.0f", g, got, g)
+			t.Errorf("low shelf %+.0fdB @1k: 50Hz %.2f dB, should~=%.0f", g, got, g)
 		}
 		if got := magDB(b0, b1, b2, a1, a2, 20000); math.Abs(got) > 1.0 {
-			t.Errorf("low rack %+.0fdB @1k: 20kHz %.2f dB, should~=0", g, got)
+			t.Errorf("low shelf %+.0fdB @1k: 20kHz %.2f dB, should~=0", g, got)
 		}
 	}
 }
@@ -104,7 +104,7 @@ func TestZeroGainPeakingIsExactUnity(t *testing.T) {
 				f, b0, b1, a1, b2, a2)
 		}
 		if m := magDB(b0, b1, b2, a1, a2, 1000); math.Abs(m) > 1e-9 {
-			t.Errorf("%.0fHz 0dB PK in 1kHz respond %.6f dB, should be 0", f, m)
+			t.Errorf("%.0fHz 0dB PK in 1kHz responds at %.6f dB, should be 0", f, m)
 		}
 	}
 }
@@ -114,14 +114,14 @@ func TestUnityCoefficientsAreTransparent(t *testing.T) {
 		t.Fatalf("Q3.15 1.0 should be 32768, actual %d", qOne)
 	}
 	if m := magDB(qOne, 0, 0, 0, 0, 1000); math.Abs(m) > 1e-9 {
-		t.Errorf("single bit coefficients respond %.6f dB, should be 0", m)
+		t.Errorf("unit coefficients response %.6f dB, should be 0", m)
 	}
 }
 
 func TestLowFrequencyFloor(t *testing.T) {
 	low := sanitizeBand(slotConfig{Type: "PK", Freq: 20, Q: 0.7, GainDB: 12})
 	if low.Freq != minBandFreq {
-		t.Errorf("20Hz should clamped to %.0fHz, actual %.0fHz", minBandFreq, low.Freq)
+		t.Errorf("20Hz should be clamped to %.0fHz, actual %.0fHz", minBandFreq, low.Freq)
 	}
 
 	for _, g := range []float64{12, -12} {
@@ -140,11 +140,11 @@ func TestLowFrequencyFloor(t *testing.T) {
 func TestUIBandFrequencies(t *testing.T) {
 	uiFreqs := []float64{60, 150, 400, 1000, 3000, 10000}
 	if len(uiFreqs) != legacyBands {
-		t.Fatalf("0.1 panel frequency point count %d != 0.1 hard item fixed set section count %d", len(uiFreqs), legacyBands)
+		t.Fatalf("0.1 panel frequency point count %d != 0.1 hardware fixed section count %d", len(uiFreqs), legacyBands)
 	}
 	for _, f := range uiFreqs {
 		if f < minBandFreq || f > maxBandFreq {
-			t.Errorf("WebUI frequency point %.0fHz exceeds safe all range [%.0f, %.0f]", f, minBandFreq, maxBandFreq)
+			t.Errorf("WebUI frequency point %.0fHz exceeds safe range [%.0f, %.0f]", f, minBandFreq, maxBandFreq)
 		}
 		for _, g := range []float64{12, -12} {
 			_, _, _, a1, a2 := design(t, slotConfig{Type: "PK", Freq: f, Q: 0.7, GainDB: g})
@@ -169,7 +169,7 @@ func TestCoefficientLayoutAndBandCount(t *testing.T) {
 	currentSlots[0] = slotConfig{Type: "PK", Freq: 1000, Q: 0.7, GainDB: 3}
 	currentSlots[4] = slotConfig{Type: "PK", Freq: 3000, Q: 0.7, GainDB: -3}
 	if n := dspActiveBands(); n != 5 {
-		t.Errorf("0 and 4 section raw effect when NR_BANDS should be 5, actual %d", n)
+		t.Errorf("when sections 0 and 4 are in effect NR_BANDS should be 5, actual %d", n)
 	}
 
 	exp := dspExpectedCoeffs()
@@ -189,6 +189,6 @@ func TestCoefficientLayoutAndBandCount(t *testing.T) {
 	}
 
 	if exp[0] == qOne {
-		t.Error("0 section +3dB b0 should not equals 1.0")
+		t.Error("0 section +3dB b0 should not equal 1.0")
 	}
 }

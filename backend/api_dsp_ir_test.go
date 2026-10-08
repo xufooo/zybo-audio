@@ -29,17 +29,17 @@ func TestLoadIRIntoStoresBothChannels(t *testing.T) {
 		t.Fatalf("load failed:%v", err)
 	}
 	if info.SourceRate != 44100 {
-		t.Errorf("source sample rateshouldrecorded as 44100,actual %d", info.SourceRate)
+		t.Errorf("source sample rate should recorded as 44100,actual %d", info.SourceRate)
 	}
 	if len(irBank[0]) != irTaps || len(irBank[1]) != irTaps {
-		t.Fatalf("both channelsshouldhas %d coefficients,actual %d / %d", irTaps, len(irBank[0]), len(irBank[1]))
+		t.Fatalf("both channels should has %d coefficients,actual %d / %d", irTaps, len(irBank[0]), len(irBank[1]))
 	}
 	if !irDirty {
-		t.Error("after loadingshould flag dirty(nextdispatchneedscoefficientcarrydown)")
+		t.Error("after loading should flag dirty(next dispatch needs coefficient carry down)")
 	}
 	coefs := irPlanCoefs()
 	if len(coefs) != 2*irTaps {
-		t.Fatalf("dispatchshouldcarry 2x%d coefficients(channel 0 first),actual %d", irTaps, len(coefs))
+		t.Fatalf("dispatch should carry 2x%d coefficients(channel 0 first),actual %d", irTaps, len(coefs))
 	}
 	if coefs[0] != irBank[0][0] || coefs[irTaps] != irBank[1][0] {
 		t.Error("flatten order should be all of channel 0, then all of channel 1")
@@ -55,10 +55,10 @@ func TestLoadIRIntoRejectsGarbage(t *testing.T) {
 	resetIRState()
 	defer resetIRState()
 	if _, err := loadIRInto([]byte("not a WAV"), "x"); err == nil {
-		t.Error("garbage datashouldfail")
+		t.Error("garbage data should fail")
 	}
 	if _, err := loadIRInto(nil, "x"); err == nil {
-		t.Error("empty datashouldfail")
+		t.Error("empty data should fail")
 	}
 
 	w := mkPCM16WAV(48000, 1, 64, func(i, c int) float64 { return 0 })
@@ -99,10 +99,10 @@ func TestIRViewReportsState(t *testing.T) {
 	defer resetIRState()
 	v := irView()
 	if v["max_taps"] != firTaps {
-		t.Errorf("max_taps shouldreport %d,actual %v", firTaps, v["max_taps"])
+		t.Errorf("max_taps should report %d,actual %v", firTaps, v["max_taps"])
 	}
 	if _, ok := v["info"]; ok {
-		t.Error("not loaded yet IR should nothas info")
+		t.Error("not loaded yet IR should not has info")
 	}
 
 	var peak float64
@@ -120,22 +120,22 @@ func TestIRViewReportsState(t *testing.T) {
 	}
 	v = irView()
 	if v["name"] != "view-probe.irs" {
-		t.Errorf("nameshould benormalized to view-probe.irs,actual %v", v["name"])
+		t.Errorf("name should be normalized to view-probe.irs,actual %v", v["name"])
 	}
 	if v["loaded_taps"] != irTaps {
-		t.Errorf("loaded_taps shouldreport %d,actual %v", irTaps, v["loaded_taps"])
+		t.Errorf("loaded_taps should report %d,actual %v", irTaps, v["loaded_taps"])
 	}
 	if v["dirty"] != true {
-		t.Error("justloadedshouldreport dirty=true")
+		t.Error("just loaded should report dirty=true")
 	}
 	_ = peak
 }
 
 func TestLoadRealJamesDSPIR(t *testing.T) {
-	const p = "/home/ooo/.config/jamesdsp/irs/thepbone-clear_bass-audio.irs"
+	p := localDataPath("irs", "thepbone-clear_bass-audio.irs")
 	b, err := os.ReadFile(p)
 	if err != nil {
-		t.Skipf("this machine lacksthat IR(%v)-- skipping", err)
+		t.Skipf("this machine lacks that IR(%v)-- skipping", err)
 	}
 	resetIRState()
 	defer resetIRState()
@@ -147,10 +147,10 @@ func TestLoadRealJamesDSPIR(t *testing.T) {
 		info.SourceRate, info.Channels, info.PeakIndex, float64(info.PeakIndex)/48000*1000,
 		info.Peak, info.Gain, info.ZeroPad)
 	if info.SourceRate != 44100 {
-		t.Errorf("source sample rateshould be 44100,actual %d", info.SourceRate)
+		t.Errorf("source sample rate should be 44100,actual %d", info.SourceRate)
 	}
 	if len(irBank[0]) != irTaps {
-		t.Fatalf("shouldhas %d taps,actual %d", irTaps, len(irBank[0]))
+		t.Fatalf("should has %d taps,actual %d", irTaps, len(irBank[0]))
 	}
 
 	mx := int32(0)
@@ -170,7 +170,7 @@ func TestLoadRealJamesDSPIR(t *testing.T) {
 		}
 	}
 	if nonzero < 64 {
-		t.Errorf("valid taps only %d,does not look like agenuine IR", nonzero)
+		t.Errorf("valid taps only %d,does not look like a genuine IR", nonzero)
 	}
 }
 
@@ -195,10 +195,10 @@ func TestNamedIRAndDDCLoadFromDisk(t *testing.T) {
 		t.Fatalf("failed to read back IR by name: %v", err)
 	}
 	if got := irLoadedName(); got != "probe-name.irs" {
-		t.Errorf("after read-backnameshould be probe-name.irs,actual %q", got)
+		t.Errorf("after read-back name should be probe-name.irs,actual %q", got)
 	}
 	if len(irBank[0]) != irTaps || !irDirty {
-		t.Error("after read-backshould carry coefficientsandflag dirty(nextdispatchcoefficientcarrydown)")
+		t.Error("after read-back should carry coefficients and flag dirty(next dispatch coefficient carry down)")
 	}
 	if err := loadIRNamed("no-such-file"); err == nil {
 		t.Error("missing file should fail (must not silently run on zero coefficients)")
@@ -213,10 +213,10 @@ func TestNamedIRAndDDCLoadFromDisk(t *testing.T) {
 		t.Fatalf("failed to read back DDC by name: %v", err)
 	}
 	if v := ddcView(); v["on"] != true || v["sections"] != 4 {
-		t.Errorf("after read-backshould be 4 sectionsandon:%+v", v)
+		t.Errorf("after read-back should be 4 sections and on:%+v", v)
 	}
 	if err := loadDDCNamed("no-such-file.vdc", 4, false); err == nil {
-		t.Error("not found DDC shouldfail")
+		t.Error("not found DDC should fail")
 	}
 }
 
@@ -224,11 +224,11 @@ func TestFIRGainIsVisibleToHeadroomDecision(t *testing.T) {
 	resetIRState()
 	defer resetIRState()
 	if g := firGainDBForHeadroom(); g != 0 {
-		t.Fatalf("noconvolver stageshould be 0,actual %.2f dB", g)
+		t.Fatalf("no convolver stage should be 0,actual %.2f dB", g)
 	}
-	b, err := os.ReadFile("/home/ooo/.config/jamesdsp/irs/thepbone-clear_bass-audio.irs")
+	b, err := os.ReadFile(localDataPath("irs", "thepbone-clear_bass-audio.irs"))
 	if err != nil {
-		t.Skip("this machine lacksthat IR")
+		t.Skip("this machine lacks that IR")
 	}
 	if _, err := loadIRInto(b, "gain-probe"); err != nil {
 		t.Fatal(err)
@@ -237,13 +237,13 @@ func TestFIRGainIsVisibleToHeadroomDecision(t *testing.T) {
 	defer func() { currentFIR = nil }()
 	g := firGainDBForHeadroom()
 	if g < 6 {
-		t.Errorf("clear_bass worst casegainshould be clearly above 0(measured to be ≈ +11.5 dB),actual %.2f dB -- "+
+		t.Errorf("clear_bass worst case gain should be clearly above 0(measured to be ≈ +11.5 dB),actual %.2f dB -- "+
 			"this would miss headroom at high volume: convolver clipping (hiss)", g)
 	}
 	if g > 18 {
-		t.Errorf("at %.2f dB exceeds in-chain 18 dB headroom,thatheadroomcannot cover(needs changing preamp strategy)", g)
+		t.Errorf("at %.2f dB exceeds in-chain 18 dB headroom,that headroom cannot cover(needs changing preamp strategy)", g)
 	}
-	t.Logf("clear_bass worst casegain = %+.2f dB(in-chain headroom 18 dB cancover)", g)
+	t.Logf("clear_bass worst case gain = %+.2f dB(in-chain headroom 18 dB can cover)", g)
 }
 
 func TestLoadRealStereoIRFromLibrary(t *testing.T) {
@@ -255,9 +255,9 @@ func TestLoadRealStereoIRFromLibrary(t *testing.T) {
 		maxDiff  float64
 		label    string
 	}{
-		{"/home/ooo/.config/jamesdsp/irs/matis-FDS_v1-audio.irs", true, 0.005, 2.0, "matis-FDS_v1(true stereo)"},
-		{"/home/ooo/.config/jamesdsp/irs/topjor-srs_2_1-audio.irs", true, 0.005, 2.0, "topjor-srs_2_1(true stereo)"},
-		{"/home/ooo/.config/jamesdsp/irs/thepbone-clear_bass-audio.irs", true, 0, 0.001, "clear_bass(2 channelsbutessentiallymono)"},
+		{localDataPath("irs", "matis-FDS_v1-audio.irs"), true, 0.005, 2.0, "matis-FDS_v1(true stereo)"},
+		{localDataPath("irs", "topjor-srs_2_1-audio.irs"), true, 0.005, 2.0, "topjor-srs_2_1(true stereo)"},
+		{localDataPath("irs", "thepbone-clear_bass-audio.irs"), true, 0, 0.001, "clear_bass(2 channels but essentially mono)"},
 	}
 	loaded := 0
 	for _, c := range cases {
@@ -276,7 +276,7 @@ func TestLoadRealStereoIRFromLibrary(t *testing.T) {
 				c.label, info.Stereo, c.wantSter, info.Channels, info.ChannelDiff)
 		}
 		if info.ChannelDiff < c.minDiff {
-			t.Errorf("%s:L/R coefficient difference %.6f below %.6f -- stereo informationdropped ?", c.label, info.ChannelDiff, c.minDiff)
+			t.Errorf("%s:L/R coefficient difference %.6f below %.6f -- stereo information dropped ?", c.label, info.ChannelDiff, c.minDiff)
 		}
 		if info.ChannelDiff > c.maxDiff {
 			t.Errorf("%s:L/R coefficient difference %.6f exceeds expected cap %.6f", c.label, info.ChannelDiff, c.maxDiff)
@@ -284,7 +284,7 @@ func TestLoadRealStereoIRFromLibrary(t *testing.T) {
 
 		plan := irPlanCoefs()
 		if len(plan) != 2*irTaps {
-			t.Fatalf("%s:dispatchshouldcarry 2x%d coefficients,actual %d", c.label, irTaps, len(plan))
+			t.Fatalf("%s:dispatch should carry 2x%d coefficients,actual %d", c.label, irTaps, len(plan))
 		}
 
 		same := 0
@@ -294,7 +294,7 @@ func TestLoadRealStereoIRFromLibrary(t *testing.T) {
 			}
 		}
 		if c.wantSter && same == irTaps {
-			t.Errorf("%s:both channels coefficients identical -- true stereonot in effect", c.label)
+			t.Errorf("%s:both channels coefficients identical -- true stereo not in effect", c.label)
 		}
 		t.Logf("%s：channels=%d stereo=%v downmixed=%v channel_diff=%.6f taps=%d",
 			c.label, info.Channels, info.Stereo, info.Downmixed, info.ChannelDiff, info.Taps)

@@ -32,12 +32,12 @@ func dynamicBassBranchNote() map[string]any {
 		"simple_branch_max_x1":     dynamicBassSimpleBranchMaxX1,
 		"source": "refs/viperfx-re/src/viper/utils/DynamicBass.cpp:21-28 (simple branch)/:29-41 (full branch); " +
 			"default preset x1=100 refs/viper4android_fx/android_4.x/res/xml/headset_preferences_l2.xml:274",
-		"decision": "Done: **simple branch** (x1 <= 120; the official default 100;5600;40;80;50;50 qualifies)," +
+		"decision": "Done: ** simple branch ** (x1 <= 120; the official default 100;5600;40;80;50;50 qualifies)," +
 			"implemented in dynbass.go, API field `dynamic_bass`;" +
-			"full branch (x1 > 120) **not done and explicitly rejected**:" + dynamicBassFullBranchBlocker(),
+			"full branch (x1 > 120) ** not done and explicitly rejected **:" + dynamicBassFullBranchBlocker(),
 		"needs_owner_decision": false,
 		"why": "On-device DYN is 'sidechain detection + level-following slow gain' (~= V4A PlaybackGain)," +
-			"a different algorithm from V4A DynamicBass => this adds a **new stage** rather than changing a branch;" +
+			"a different algorithm from V4A DynamicBass => this adds a ** new stage ** rather than changing a branch;" +
 			"the simple branch' s 'same-tick L+R' can only do on this unit: 'R pass same-frame, L pass late 1 sample'" +
 			"(TB measurement, see fpga/src/tb/tb_engine_xphase.v)",
 		"side_channel_lag_samples": dynamicBassSideLagSmp,
@@ -321,7 +321,7 @@ func checkFrameBudget(nodes []planNode) error {
 	}
 	return newCapacityError("frame", u.Cost, frameBudgetCycles,
 		"Chain does not fit the per-frame budget: %d sections%s%s ~= %d cycles > per channel %d cycles (%s)"+
-			"- over budget **drops samples** (sounds like occasional clicks). Drop a section, turn off convolution, or split the effects",
+			"- over budget ** drops samples ** (sounds like occasional clicks). Drop a section, turn off convolution, or split the effects",
 		u.Sections, map[bool]string{true: " + convolution", false: ""}[u.HasFIR],
 		map[bool]string{true: " + small FIR", false: ""}[u.HasSFIR],
 		u.Cost, frameBudgetCycles, fmt.Sprintf("per section %d cycles", costPerSectionRuntime()))

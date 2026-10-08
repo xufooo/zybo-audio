@@ -237,7 +237,7 @@ func deleteUserType(name string) error {
 	if isBuiltinType(name) {
 		return fmt.Errorf("%q is a built-in type, cannot delete", name)
 	}
-	return fmt.Errorf("not found user type %q", name)
+	return fmt.Errorf("User type %q not found", name)
 }
 
 func isBuiltinType(name string) bool {
@@ -259,7 +259,7 @@ func renameUserType(from, to string) (string, error) {
 		return to, nil
 	}
 	if isBuiltinType(to) {
-		return "", fmt.Errorf("new name %q clashes with a built-in type, pick another", to)
+		return "", fmt.Errorf("New name %q clashes with a built-in type, pick another", to)
 	}
 	list, err := loadUserTypes()
 	if err != nil {
@@ -276,11 +276,11 @@ func renameUserType(from, to string) (string, error) {
 		if isBuiltinType(from) {
 			return "", fmt.Errorf("%q is a built-in type, cannot rename; use 'Save As' to copy it", from)
 		}
-		return "", fmt.Errorf("not found user type %q", from)
+		return "", fmt.Errorf("User type %q not found", from)
 	}
 	for _, t := range list {
 		if t.Name == to {
-			return "", fmt.Errorf("A type named %q", to)
+			return "", fmt.Errorf("A type named %q already exists", to)
 		}
 	}
 	renamed := *found
@@ -304,5 +304,5 @@ func findType(name string) (SoundType, error) {
 			return t, nil
 		}
 	}
-	return SoundType{}, fmt.Errorf("not found type %q", name)
+	return SoundType{}, fmt.Errorf("Type %q not found", name)
 }

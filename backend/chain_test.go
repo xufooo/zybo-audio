@@ -23,7 +23,7 @@ func TestChainSlotTypeMapping(t *testing.T) {
 		}
 	}
 	if _, ok := chainSlotType("crossfeed"); ok {
-		t.Error("crossfeed should notmap to a hardware slot(P2 has)")
+		t.Error("crossfeed should not map to a hardware slot(P2 has)")
 	}
 }
 
@@ -38,7 +38,7 @@ func TestChainSixBandsFits(t *testing.T) {
 	}
 	slots, n, err := chainToSlots(chain)
 	if err != nil {
-		t.Fatalf("6 sectionsshouldfit,butfail:%v", err)
+		t.Fatalf("6 sections should fit,but fail:%v", err)
 	}
 	if n != 6 {
 		t.Errorf("live sections = %d,expected 6", n)
@@ -69,14 +69,14 @@ func TestChainTenBandsErrorsNotTruncates(t *testing.T) {
 		t.Fatal("10 sections on 6-section hardware must fail, not truncate silently")
 	}
 	msg := err.Error()
-	for _, want := range []string{"10", "6", "NOT applied"} {
+	for _, want := range []string{"10 sections", "6 sections", "NOT applied"} {
 		if !strings.Contains(msg, want) {
-			t.Errorf("errormessageshould mention %q,actual:%s", want, msg)
+			t.Errorf("error message should mention %q,actual:%s", want, msg)
 		}
 	}
 
 	if !strings.Contains(msg, "3534") && !strings.Contains(msg, "1026") {
-		t.Errorf("errormessageshould namenotshoulduse sections,actual:%s", msg)
+		t.Errorf("error message should name not should use sections,actual:%s", msg)
 	}
 }
 
@@ -95,7 +95,7 @@ func TestChainPlannedTypeExplains(t *testing.T) {
 			continue
 		}
 		if !strings.Contains(err.Error(), stage) {
-			t.Errorf("%s failshould mentionstage %s,actual:%v", typ, stage, err)
+			t.Errorf("%s fail should mention stage %s,actual:%v", typ, stage, err)
 		}
 	}
 
@@ -115,13 +115,13 @@ func TestChainIgnoresDisabledAndSanitizes(t *testing.T) {
 		t.Fatalf("should not fail:%v", err)
 	}
 	if n != 1 {
-		t.Errorf("live sections = %d,expected 1(disabled itemstake no slots)", n)
+		t.Errorf("live sections = %d,expected 1(disabled items take no slots)", n)
 	}
 	if slots[0].Freq != minBandFreq {
-		t.Errorf("15 Hz should beclamped to %.0f Hz,actual %.0f", minBandFreq, slots[0].Freq)
+		t.Errorf("15 Hz should be clamped to %.0f Hz,actual %.0f", minBandFreq, slots[0].Freq)
 	}
 	if slots[1].Type != "off" {
-		t.Errorf("remaining slotsshould be off,actual %q", slots[1].Type)
+		t.Errorf("remaining slots should be off,actual %q", slots[1].Type)
 	}
 }
 
@@ -138,7 +138,7 @@ func TestChainRequiresAndUnsupported(t *testing.T) {
 	}
 	unsup := chainUnsupported(chain)
 	if _, ok := unsup["crossfeed"]; !ok {
-		t.Error("crossfeed shouldlisted in unsupported ")
+		t.Error("crossfeed should listed in unsupported ")
 	}
 	if _, ok := unsup["peq"]; ok {
 		t.Error("peq must not be listed in unsupported ")
@@ -165,7 +165,7 @@ func TestChainFromSlotsRoundTrip(t *testing.T) {
 	}
 	slots2, _, err := chainToSlots(back)
 	if err != nil {
-		t.Fatalf("read back chainshould persist again:%v", err)
+		t.Fatalf("read back chain should persist again:%v", err)
 	}
 	for i := range slots {
 		if slots[i] != slots2[i] {
@@ -199,14 +199,14 @@ func TestChainHeadroomOverWholeChain(t *testing.T) {
 	}
 	maxGain := cascadeMaxGainDB(coefs)
 	if maxGain <= 0 {
-		t.Fatalf("thischainhas boost,cascaded max gainshould > 0,actual %.2f dB", maxGain)
+		t.Fatalf("this chain has boost,cascaded max gain should > 0,actual %.2f dB", maxGain)
 	}
 	pre := effectivePreampDB(maxGain, 0)
 	if pre >= 0 {
 		t.Errorf("with boost preamp must < 0(automatic headroom),actual %.2f dB", pre)
 	}
 	if pre > -(maxGain+preampSafetyMarginDB)+0.01 {
-		t.Errorf("preamp = %.2f nocover enough headroom(max boost %.2f + safety margin %.1f)",
+		t.Errorf("preamp = %.2f no cover enough headroom(max boost %.2f + safety margin %.1f)",
 			pre, maxGain, preampSafetyMarginDB)
 	}
 
@@ -215,6 +215,6 @@ func TestChainHeadroomOverWholeChain(t *testing.T) {
 		flat[i] = [coefPerBand]int32{qOne, 0, 0, 0, 0}
 	}
 	if pre := effectivePreampDB(cascadeMaxGainDB(flat), 0); pre != 0 {
-		t.Errorf("perfectly flatshould noteat headroom,actual %.2f dB", pre)
+		t.Errorf("perfectly flat should not eat headroom,actual %.2f dB", pre)
 	}
 }

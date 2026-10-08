@@ -39,7 +39,7 @@ func TestBuiltinTypesShape(t *testing.T) {
 	}
 	for _, e := range gong.Effects {
 		if e.Enabled && e.ID != "limiter" {
-			t.Errorf("Amplifier should not enabled by default coloration effects, but %q is open", e.ID)
+			t.Errorf("Amplifier should not enable by default coloration effects, but %q is on", e.ID)
 		}
 	}
 
@@ -50,7 +50,7 @@ func TestBuiltinTypesShape(t *testing.T) {
 		}
 	}
 	if bands == 0 {
-		t.Error("Headphones type default not enabled any what with section effect")
+		t.Error("Headphones should have section-based effects enabled by default")
 	}
 
 	for _, ty := range list {
@@ -165,7 +165,7 @@ func TestDeleteAndRenameRules(t *testing.T) {
 	if err := deleteUserType("Amplifier"); err == nil {
 		t.Error("built-in type should not be deletable")
 	}
-	if _, err := renameUserType("Amplifier", "Amplifier 2"); err == nil {
+	if _, err := renameUserType("Amplifier", "Amplifier2"); err == nil {
 		t.Error("built-in type should not be renamable")
 	}
 

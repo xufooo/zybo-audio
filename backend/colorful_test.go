@@ -10,7 +10,7 @@ func TestColorfulCoeffsMatchReferenceModel(t *testing.T) {
 	p := colorfulParams{Depth: 1000, Widening: 0.5, MidImage: 0.8}
 	jsd, js3, err := colorfulJointCoefs(p, sampleRate)
 	if err != nil {
-		t.Fatalf("colorfulJointCoefs：%v", err)
+		t.Fatalf("colorfulJointCoefs: %v", err)
 	}
 	wantJSD := [9]int32{
 		18427,
@@ -20,10 +20,10 @@ func TestColorfulCoeffsMatchReferenceModel(t *testing.T) {
 	}
 	wantJS3 := [2]int32{30147, -9175}
 	if jsd != wantJSD {
-		t.Errorf("JDST coefficients and reference model not symbol: \n got %v\n expect %v", jsd, wantJSD)
+		t.Errorf("JDST coefficients and reference model do not match: \n got %v\n expect %v", jsd, wantJSD)
 	}
 	if js3 != wantJS3 {
-		t.Errorf("J3DS coefficients and reference model not symbol: got %v, expect %v", js3, wantJS3)
+		t.Errorf("J3DS coefficients and reference model do not match: got %v, expect %v", js3, wantJS3)
 	}
 
 	if got := colorfulJointDelayWords(sampleRate); got != 960 {
@@ -93,7 +93,7 @@ func TestColorfulPlanShape(t *testing.T) {
 	}
 	cn, err := colorfulNodes(colorfulDefaultParams())
 	if err != nil {
-		t.Fatalf("colorfulNodes：%v", err)
+		t.Fatalf("colorfulNodes: %v", err)
 	}
 	nodes = append(nodes, cn...)
 
@@ -101,7 +101,7 @@ func TestColorfulPlanShape(t *testing.T) {
 
 	p, err := buildSlotPlanNodes(nodes)
 	if err != nil {
-		t.Fatalf("buildSlotPlanNodes (4 node -> 3 slot): %v", err)
+		t.Fatalf("buildSlotPlanNodes (4 nodes -> 3 slots): %v", err)
 	}
 	if !p.StereoFrame {
 		t.Fatal("with joint section table must set StereoFrame (header bit8 = sf_en)")
@@ -166,7 +166,7 @@ func TestColorfulPlanShape(t *testing.T) {
 	jsd, js3, _ := colorfulJointCoefs(colorfulDefaultParams(), sampleRate)
 	for i := 0; i < 9; i++ {
 		if p.Coefs[10+i] != jsd[i] {
-			t.Errorf("JDST %d coefficients (global 10+%d)= %d, expect %d", i, i, p.Coefs[10+i], jsd[i])
+			t.Errorf("JDST %d coefficients (global 10+%d) = %d, expect %d", i, i, p.Coefs[10+i], jsd[i])
 		}
 	}
 	if p.Coefs[19] != 0 {
@@ -184,7 +184,7 @@ func TestColorfulPlanShape(t *testing.T) {
 	if want := 3 + jointStateReserve; p.Sections != want {
 		t.Errorf("section count should be %d, got %d", want, p.Sections)
 	}
-	t.Logf("joint section plan plan: %d slots / %d sections / %d coefficients, jbus=%d (StereoFrame=%v)",
+	t.Logf("joint section plan: %d slots / %d sections / %d coefficients, jbus=%d (StereoFrame=%v)",
 		p.Slots, p.Sections, len(p.Coefs), p.JBus, p.StereoFrame)
 }
 
@@ -197,13 +197,13 @@ func TestColorfulDelayOffsetDoesNotOverlap(t *testing.T) {
 
 	cn, err := colorfulNodes(colorfulDefaultParams())
 	if err != nil {
-		t.Fatalf("colorfulNodes：%v", err)
+		t.Fatalf("colorfulNodes: %v", err)
 	}
 	nodes := append([]planNode{}, cn...)
 	nodes = append(nodes, planNode{Kind: planKindDelay, Len: 100})
 	p, err := buildSlotPlanNodes(nodes)
 	if err != nil {
-		t.Fatalf("buildSlotPlanNodes：%v", err)
+		t.Fatalf("buildSlotPlanNodes: %v", err)
 	}
 	stbOf := func(slot int) int {
 		for _, w := range p.Words {
@@ -223,7 +223,7 @@ func TestColorfulDelayOffsetDoesNotOverlap(t *testing.T) {
 	}
 
 	if otherOff < jointOff+colorfulJointDelayWords(sampleRate) {
-		t.Errorf("delay interval overlap: joint [%d,%d) and another one slot [%d,%d)",
+		t.Errorf("delay interval overlap: joint [%d,%d) and another slot [%d,%d)",
 			jointOff, jointOff+colorfulJointDelayWords(sampleRate), otherOff, otherOff+100)
 	}
 }
@@ -236,10 +236,10 @@ func TestColorfulRejectedWithoutHardware(t *testing.T) {
 	p := colorfulDefaultParams()
 	err := setColorfulMusic(&p)
 	if err == nil {
-		t.Fatal("missing CAP1 bit12 when must reject deploy ColorfulMusic (silent downgrade will let user for open)")
+		t.Fatal("without CAP1 bit12, must reject deploy ColorfulMusic (silent downgrade will let user think it is on)")
 	}
 	if !strings.Contains(err.Error(), "joint-stereo frame") {
-		t.Errorf("rejection reason must state the missing one is' joint-stereo frame pass', got: %v", err)
+		t.Errorf("rejection reason must state the missing one is 'joint-stereo frame pass', got: %v", err)
 	}
 	if currentColorful != nil {
 		t.Error("after rejection the state must not be left dirty (must not leave in memory 'on')")
@@ -247,15 +247,15 @@ func TestColorfulRejectedWithoutHardware(t *testing.T) {
 
 	var c dspEngineCaps
 	if c.JointStereoAvailable() {
-		t.Error("missing CAP0 magic when should not report available")
+		t.Error("without CAP0 magic, should not report available")
 	}
 	c = dspEngineCaps{Present: true, Opcodes: capOpcodeJointStereo}
 	if !c.JointStereoAvailable() {
-		t.Error("set CAP1 bit12 should report available")
+		t.Error("with CAP1 bit12 set, should report available")
 	}
 	c.Opcodes = 0x0FFB
 	if c.JointStereoAvailable() {
-		t.Error("legacy bitmap (0FFB) should not report has joint-stereo frame pass")
+		t.Error("legacy bitmap (0FFB) should not report joint-stereo frame pass")
 	}
 }
 
@@ -269,7 +269,7 @@ func TestColorfulStateReserveIsEnforced(t *testing.T) {
 
 	cn, err := colorfulNodes(colorfulDefaultParams())
 	if err != nil {
-		t.Fatalf("colorfulNodes：%v", err)
+		t.Fatalf("colorfulNodes: %v", err)
 	}
 
 	ok := make([]planNode, 0, 48)
@@ -278,7 +278,7 @@ func TestColorfulStateReserveIsEnforced(t *testing.T) {
 	}
 	ok = append(ok, cn...)
 	if _, err := buildSlotPlanNodes(ok); err != nil {
-		t.Fatalf("%d sections + joint section should fit (per channel leave %d sections), got: %v",
+		t.Fatalf("%d sections + joint section should fit (per channel reserved for %d sections), got: %v",
 			48-jointStateReserve, jointStateReserve, err)
 	}
 
@@ -314,18 +314,18 @@ func TestColorfulFrameBudgetCountsJointCycles(t *testing.T) {
 			jointStateReserve, p1.Sections, p2.Sections)
 	}
 	if p2.Slots != p1.Slots+2 {
-		t.Errorf("joint section take two slot (got %d -> %d)", p1.Slots, p2.Slots)
+		t.Errorf("joint section take two slots (got %d -> %d)", p1.Slots, p2.Slots)
 	}
 }
 
 func TestColorfulValidate(t *testing.T) {
 
 	if _, err := colorfulValidate(colorfulDefaultParams()); err != nil {
-		t.Errorf("client user end default params should valid: %v", err)
+		t.Errorf("client default params should be valid: %v", err)
 	}
 
 	if _, err := colorfulValidate(colorfulParams{Depth: 1001, Widening: 1.2, MidImage: 1.5}); err == nil {
-		t.Error("depth=1001 should reject (core core range 0..1000)")
+		t.Error("depth=1001 should reject (core range 0..1000)")
 	}
 
 	if _, err := colorfulValidate(colorfulParams{Depth: 200, Widening: 5, MidImage: 1.5}); err == nil {
@@ -334,7 +334,7 @@ func TestColorfulValidate(t *testing.T) {
 
 	got, err := colorfulValidate(colorfulParams{Depth: 200, Widening: -3, MidImage: -1})
 	if err != nil {
-		t.Fatalf("negative value should clamped is not error: %v", err)
+		t.Fatalf("negative value should be clamped and not error: %v", err)
 	}
 	if got.Widening != 0 || got.MidImage != 0 {
 		t.Errorf("negative value should clamp to 0, got widening=%v mid_image=%v", got.Widening, got.MidImage)
@@ -342,6 +342,6 @@ func TestColorfulValidate(t *testing.T) {
 
 	client := colorfulParams{Depth: 200, Widening: 120.0 / 100.0, MidImage: 150.0 / 100.0}
 	if _, err := colorfulValidate(client); err != nil {
-		t.Errorf("client user end default preset (120;200 / 150) converted should valid: %v", err)
+		t.Errorf("client default preset (120;200 / 150) converted should be valid: %v", err)
 	}
 }

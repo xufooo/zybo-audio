@@ -6,7 +6,7 @@ import "testing"
 func TestChainTypeMapAcceptsConvolver(t *testing.T) {
 	for _, k := range []string{"fir", "convolver", "ir"} {
 		if got := chainTypeToSlot[k]; got != "FIR" {
-			t.Errorf("%q shouldmap to FIR,actual %q", k, got)
+			t.Errorf("%q should map to FIR,actual %q", k, got)
 		}
 	}
 
@@ -37,7 +37,7 @@ func TestSlotPlanEmitsFIRSlot(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("noplanned FIR slot(word count %d)", len(p.Words))
+		t.Fatalf("no planned FIR slot(word count %d)", len(p.Words))
 	}
 
 	wantLg := 0
@@ -45,7 +45,7 @@ func TestSlotPlanEmitsFIRSlot(t *testing.T) {
 		wantLg++
 	}
 	if n := int((cfg >> 16) & 0xFF); n != wantLg {
-		t.Errorf("FIR slot n should be log2(%d)=%d,actual %d(8 bitsdoes not fitblock count,mustuselog encoding)",
+		t.Errorf("FIR slot n should be log2(%d)=%d,actual %d(8 bits does not fit block count,must use log encoding)",
 			firTaps/firMACS, wantLg, n)
 	}
 	if taps := firMACS << ((cfg >> 16) & 0xFF); taps != firTaps {
@@ -53,7 +53,7 @@ func TestSlotPlanEmitsFIRSlot(t *testing.T) {
 	}
 
 	if len(p.Coefs) != 5 {
-		t.Errorf("FIR should not occupy EQ coefficientspace:expected 5words(one biquad),actual %d", len(p.Coefs))
+		t.Errorf("FIR should not occupy EQ coefficient space:expected 5words(one biquad),actual %d", len(p.Coefs))
 	}
 }
 
@@ -64,7 +64,7 @@ func TestSlotPlanRejectsNonPowerOfTwoBlocks(t *testing.T) {
 	}
 	nodes = []planNode{{Kind: planKindFIR, Blocks: 1 << 20}}
 	if _, err := buildSlotPlanNodes(nodes); err == nil {
-		t.Error("exceeds firTaps block countshouldfail")
+		t.Error("exceeds firTaps block count should fail")
 	}
 }
 
@@ -77,9 +77,9 @@ func TestChainWithConvolverPlansFIRSlot(t *testing.T) {
 	if currentFIR == nil {
 
 		if firAvailable() {
-			t.Fatal("has FIR capabilitybutnot set currentFIR")
+			t.Fatal("has FIR capability but not set currentFIR")
 		}
-		t.Skip("this environmentno FIR capabilitybits(not on hardware/old bitstream):alreadyconfirmednotset currentFIR")
+		t.Skip("this environment no FIR capability bits(not on hardware/old bitstream):already confirmed not set currentFIR")
 	}
 	nodes, err := buildChainNodes(nil, nil, nil, nil)
 	if err != nil {
@@ -90,7 +90,7 @@ func TestChainWithConvolverPlansFIRSlot(t *testing.T) {
 		if n.Kind == planKindFIR {
 			found = true
 			if got := firMACS * n.Blocks; got != firTaps {
-				t.Errorf("FIR nodeshould be %d taps,actual %d", firTaps, got)
+				t.Errorf("FIR node should be %d taps,actual %d", firTaps, got)
 			}
 		}
 	}
@@ -100,7 +100,7 @@ func TestChainWithConvolverPlansFIRSlot(t *testing.T) {
 
 	applyChainEffects([]ChainItem{{Type: "convolver", Enabled: false}})
 	if currentFIR != nil {
-		t.Error("chain item disabled shouldclear currentFIR")
+		t.Error("chain item disabled should clear currentFIR")
 	}
 }
 
@@ -112,7 +112,7 @@ func TestBuildChainNodesIncludesFIRDeterministic(t *testing.T) {
 		t.Fatalf("chain build failed:%v", err)
 	}
 	if len(nodes) != 1 || nodes[0].Kind != planKindFIR {
-		t.Fatalf("should have onlyone FIR node,actual %+v", nodes)
+		t.Fatalf("should have only one FIR node,actual %+v", nodes)
 	}
 	if got := firMACS * nodes[0].Blocks; got != firTaps {
 		t.Errorf("should fill by default %d taps,actual %d", firTaps, got)
@@ -153,18 +153,18 @@ func TestEnsureChainItemAutoWires(t *testing.T) {
 
 	ensureChainItem("fir", "b.irs")
 	if len(currentUserChain) != 1 {
-		t.Fatalf("already existsconvolver stagebutagaininserted an extra item:%+v", currentUserChain)
+		t.Fatalf("already exists convolver stage but again inserted an extra item:%+v", currentUserChain)
 	}
 	if currentUserChain[0].Name != "b.irs" {
-		t.Errorf("nameshouldupdated to b.irs,actual %q", currentUserChain[0].Name)
+		t.Errorf("name should updated to b.irs,actual %q", currentUserChain[0].Name)
 	}
 
 	ensureChainItem("ddc", "c.vdc")
 	if len(currentUserChain) != 2 {
-		t.Fatalf("DDC itemsmissing:%+v", currentUserChain)
+		t.Fatalf("DDC items missing:%+v", currentUserChain)
 	}
 	if got := chainEffectType[normalizeChainType("vdc")]; got != "ddc" {
-		t.Errorf(".vdc shouldnormalized to ddc,actual %q", got)
+		t.Errorf(".vdc should normalized to ddc,actual %q", got)
 	}
 
 	dropChainItem("ddc")
@@ -173,13 +173,13 @@ func TestEnsureChainItemAutoWires(t *testing.T) {
 	}
 	dropChainItem("convolver")
 	if len(currentUserChain) != 0 {
-		t.Errorf("convolver itemshould beremoved:%+v", currentUserChain)
+		t.Errorf("convolver item should be removed:%+v", currentUserChain)
 	}
 
 	currentUserChain = []ChainItem{{Type: "peq", Enabled: true}, {Type: "crossfeed", Enabled: true}}
 	dropChainItem("ddc")
 	if len(currentUserChain) != 2 {
-		t.Errorf("must not touchothereffect:%+v", currentUserChain)
+		t.Errorf("must not touch other effect:%+v", currentUserChain)
 	}
 }
 
@@ -196,10 +196,10 @@ func TestIRUnloadClearsLevelAndChainItem(t *testing.T) {
 
 	irUnload()
 	if currentFIR != nil {
-		t.Error("after uninstalling currentFIR shouldis nil(otherwiseslot countalwaysshow'has convolver')")
+		t.Error("after uninstalling currentFIR should is nil(otherwise slot count always show'has convolver')")
 	}
 	if len(currentUserChain) != 0 {
-		t.Errorf("after uninstallingin chainshould no longer containconvolver item:%+v", currentUserChain)
+		t.Errorf("after uninstalling in chain should no longer contain convolver item:%+v", currentUserChain)
 	}
 	if got := irView()["in_chain"]; got != false {
 		t.Errorf("irView().in_chain should truthfully report false,actual %v", got)
@@ -211,7 +211,7 @@ func TestIRUnloadClearsLevelAndChainItem(t *testing.T) {
 		t.Errorf("after reinstalling in_chain should be true,actual %v", got)
 	}
 	if len(currentUserChain) != 1 || currentUserChain[0].Name != "y.irs" {
-		t.Errorf("reinstalled chain itemis wrong:%+v", currentUserChain)
+		t.Errorf("reinstalled chain item is wrong:%+v", currentUserChain)
 	}
 }
 
@@ -219,10 +219,10 @@ func TestFIRCoefAddressSpaceFitsHardwareCidx(t *testing.T) {
 	const cidxMax = 65535
 	last := coefFIRBase + 2*firTaps - 1
 	if last > cidxMax {
-		t.Fatalf("FIR coefficientsend address %d exceedshardware CIDX cap %d(willtruncate)", last, cidxMax)
+		t.Fatalf("FIR coefficients end address %d exceeds hardware CIDX cap %d(will truncate)", last, cidxMax)
 	}
 	if coefFIRBase <= 128 {
-		t.Errorf("coefFIRBase=%d did not avoid EQ coefficientspace(128 words),willclobber each other", coefFIRBase)
+		t.Errorf("coefFIRBase=%d did not avoid EQ coefficient space(128 words),will clobber each other", coefFIRBase)
 	}
 	if len(irPlanCoefs()) != 0 {
 		t.Errorf("with no pending IR, irPlanCoefs() should be empty (avoid moving 8192 words on every dispatch)")
@@ -241,7 +241,7 @@ func TestFIRCoefAddressSpaceFitsHardwareCidx(t *testing.T) {
 
 	got := irPlanCoefs()
 	if len(got) != 2*firTaps {
-		t.Fatalf("coefficientcount should be %d(2 channels x %d taps),actual %d", 2*firTaps, firTaps, len(got))
+		t.Fatalf("coefficient count should be %d(2 channels x %d taps),actual %d", 2*firTaps, firTaps, len(got))
 	}
 	for i, v := range got {
 		if int32(int16(v)) != v && v != 0 {

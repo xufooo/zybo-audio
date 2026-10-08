@@ -104,7 +104,7 @@ func main() {
 		log.Println("Shutting down...")
 
 		if err := flushPendingState(); err != nil {
-			log.Printf("before exitpersist failed:%v", err)
+			log.Printf("before exit persist failed:%v", err)
 		}
 		server.Close()
 	}()

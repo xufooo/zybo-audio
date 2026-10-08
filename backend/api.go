@@ -300,7 +300,7 @@ func handleVolume(w http.ResponseWriter, r *http.Request) {
 
 	if loudnessOn && dspAvailable {
 		if err := reapplyCurrentChain(); err != nil {
-			log.Printf("loudness compensationre-dispatch failed: %v", err)
+			log.Printf("loudness compensation re-dispatch failed: %v", err)
 		}
 	}
 	w.WriteHeader(http.StatusOK)

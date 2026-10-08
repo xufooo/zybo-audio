@@ -10,25 +10,25 @@ import (
 func TestViPERBassBoardPlanBytes(t *testing.T) {
 	path := os.Getenv("VIPERBASS_VDC")
 	if path == "" {
-		path = "/home/ooo/.config/jamesdsp/vdc/mh750.vdc"
+		path = localDataPath("vdc", "mh750.vdc")
 	}
 	body, err := os.ReadFile(path)
 	if err != nil {
-		t.Skipf("missing this %s (private asset, not in repo): skipping on-board plan cross-check", path)
+		t.Skipf("missing local %s (private asset, not in repo): skipping on-board plan cross-check", path)
 	}
 	secs, rate, err := parseVDC(body, 48000)
 	if err != nil {
 		t.Fatalf("parse %s failed: %v", path, err)
 	}
 	if rate != 48000 {
-		t.Fatalf("this .vdc sample rate = %d, expect 48000 (quote engine convention)", rate)
+		t.Fatalf("this .vdc sample rate = %d, expect 48000 (engine convention)", rate)
 	}
 	q, _, err := vdcToQ315(secs)
 	if err != nil {
 		t.Fatalf("quantize .vdc failed: %v", err)
 	}
 	if len(q) != 18 {
-		t.Fatalf("mh750.vdc should has 18 section, got %d", len(q))
+		t.Fatalf("mh750.vdc should have 18 sections, got %d", len(q))
 	}
 
 	var nodes []planNode
@@ -63,12 +63,12 @@ func TestViPERBassBoardPlanBytes(t *testing.T) {
 
 	vb := slots[len(slots)-2]
 	if vb.Op != opBiquad || vb.N != 2 || vb.In != 7 || vb.Out != 8 || vb.Cfb != 90 || vb.Stb != 18 {
-		t.Errorf("ViPERBass dual two stage slot = op%d n%d in%d out%d cfb%d stb%d, expect op1 n2 in7 out8 cfb90 stb18",
+		t.Errorf("ViPERBass biquad slot = op%d n%d in%d out%d cfb%d stb%d, expect op1 n2 in7 out8 cfb90 stb18",
 			vb.Op, vb.N, vb.In, vb.Out, vb.Cfb, vb.Stb)
 	}
 	mx := slots[len(slots)-1]
 	if mx.Op != opMix2 || mx.In != 7 || mx.InB != 8 || mx.Out != 8 || mx.Cfb != 100 {
-		t.Errorf("MIX2 slot = op%d dry%d wet%d %d cfb%d, expect op3 dry 7 wet 8 8 cfb100",
+		t.Errorf("MIX2 slot = op%d dry%d wet%d out%d cfb%d, expect op3 dry 7 wet 8 out 8 cfb100",
 			mx.Op, mx.In, mx.InB, mx.Out, mx.Cfb)
 	}
 

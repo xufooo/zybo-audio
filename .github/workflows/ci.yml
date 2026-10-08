@@ -37,7 +37,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 26
       - run: npm ci --prefix tools/webui-check
       - name: Panel smoke (no built-in cards expected)
         run: NODE_PATH=tools/webui-check/node_modules node tools/webui_smoke.js webui/index.html 0

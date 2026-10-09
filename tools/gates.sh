@@ -53,7 +53,7 @@ rm -rf __pycache__ tools/__pycache__
 note "ok: python syntax"
 
 tagok=1
-for tag in v0.3.0; do
+for tag in v0.3.0 v0.4.0; do
   git rev-parse -q --verify "refs/tags/$tag" >/dev/null || { bad "missing tag $tag"; tagok=0; }
 done
 [ "$tagok" -eq 1 ] && note "ok: tags present"

@@ -146,6 +146,9 @@ func dspHeadroomUsable() bool {
 }
 
 func coefWindow() int {
+	if dspEngineGen == 1 {
+		return hwCoefWords
+	}
 	return bandLimit() * coefPerBand
 }
 
@@ -714,8 +717,6 @@ func dspWriteAllBands() error {
 		if len(plan.FirCoefs) > 0 {
 			irClearDirty()
 		}
-
-		lastPlanCoefs = append(lastPlanCoefs[:0], plan.Coefs...)
 
 		if err := dspAntiPopAfterDownload(plan); err != nil {
 

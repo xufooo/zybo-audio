@@ -258,9 +258,7 @@ func TestFXPresetHTTPRejectsWithoutPOLY(t *testing.T) {
 	}
 }
 
-var snapshotExempt = map[string]string{
-	"currentFIR": "Coefficient body lives in irBank; rolling back only the pointer would desync ledger and hardware",
-}
+var snapshotExempt = map[string]string{}
 
 var snapshotFieldToGlobal = map[string]string{
 	"dyn":     "currentDynBass",
@@ -274,6 +272,7 @@ var snapshotFieldToGlobal = map[string]string{
 	"clarity": "currentClarity",
 	"spk":     "currentSpeakerCorrection",
 	"analogx": "currentAnalogX",
+	"fir":     "currentFIR",
 }
 
 func funcBody(src, header string) string {

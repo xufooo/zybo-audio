@@ -114,8 +114,8 @@ func setClarity(p *clarityParams) error {
 		p.Level = 0
 	}
 
-	if p.Level > 100 {
-		return fmt.Errorf("Clarity range 0..100 (native V4A panel values), got %g", p.Level)
+	if p.Level > 200 {
+		return fmt.Errorf("Clarity range 0..200, got %g", p.Level)
 	}
 	if p.Mode != clarityModeNatural && p.Mode != clarityModeOzone && p.Mode != clarityModeXHIFI {
 		return fmt.Errorf("Unknown Clarity tier %d", p.Mode)

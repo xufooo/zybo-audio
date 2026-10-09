@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -35,11 +36,10 @@ const (
 	capOpcodeDyn = 1 << 11
 
 	slotWordSize = 8
-	slotHdrAddr  = dspSlotMax * 8
 
 	dspSlotMax = 24
 
-	maxSections = 48
+	maxSections = 40
 	secPerSlot  = 3
 	opNop       = 0
 	opBiquad    = 1
@@ -493,7 +493,11 @@ func dspWriteActiveCoef(idx int, v int32) error {
 	return nil
 }
 
+var dspDlMu sync.Mutex
+
 func dspDownloadSlotPlan(p slotPlan) error {
+	dspDlMu.Lock()
+	defer dspDlMu.Unlock()
 	if !dspAvailable {
 		return errDSPUnavailable
 	}
@@ -535,7 +539,7 @@ func dspDownloadSlotPlan(p slotPlan) error {
 		hdr |= 1 << 8
 		hdr |= (uint32(p.JBus) & 0x1F) << 9
 	}
-	regWrite(regSlotAddr, slotHdrAddr)
+	regWrite(regSlotAddr, uint32(slotLimit()*8))
 	regWrite(regSlotData, hdr)
 
 	var opseq []string
@@ -564,10 +568,15 @@ func dspDownloadSlotPlan(p slotPlan) error {
 		bank = ctrlBankSel
 	}
 	dspSetCtrlBits(ctrlBankSel, bank)
+	lastPlanCoefs = append(lastPlanCoefs[:0], p.Coefs...)
 	return nil
 }
 
+var ctrlMu sync.Mutex
+
 func dspSetCtrlBits(mask, val uint32) {
+	ctrlMu.Lock()
+	defer ctrlMu.Unlock()
 	cur := regRead(regCtrl)
 	regWrite(regCtrl, (cur&^mask)|(val&mask))
 }
@@ -730,7 +739,7 @@ func buildSlotPlanNodes(nodes []planNode) (slotPlan, error) {
 	delaySlots := 0
 	allocDelay := func(L int) (int, error) {
 		if delaySlots >= hwDelaySlots {
-			return 0, fmt.Errorf("This frame needs %d delay slots, bitstream supports only %d"+
+			return 0, newCapacityError("delayslots", delaySlots+1, hwDelaySlots, "This frame needs %d delay slots, bitstream supports only %d"+
 				"(CAP3[23:16]; legacy bitstreams have a single delay-ring write pointer, two delay slots would clobber each other)",
 				delaySlots+1, hwDelaySlots)
 		}
@@ -753,7 +762,7 @@ func buildSlotPlanNodes(nodes []planNode) (slotPlan, error) {
 			dBP, dLP := n.Flags, n.Len
 			for k, d := range []int{dBP, dLP} {
 				if d < 1 || d > hwDelayWords {
-					return p, fmt.Errorf("Clarity XHIFI branch %d delay %d samples exceeds delay ring %d words",
+					return p, newCapacityError("delaywords", d, hwDelayWords, "Clarity XHIFI branch %d delay %d samples exceeds delay ring %d words",
 						k+1, d, hwDelayWords)
 				}
 			}
@@ -767,7 +776,7 @@ func buildSlotPlanNodes(nodes []planNode) (slotPlan, error) {
 			}
 
 			if coefIdx+70 > hwCoefWords {
-				return p, fmt.Errorf("Coefficient RAM too small: Clarity XHIFI needs %d..%d, each bank has only %d words",
+				return p, newCapacityError("coefs", coefIdx+69, hwCoefWords, "Coefficient RAM too small: Clarity XHIFI needs %d..%d, each bank has only %d words",
 					coefIdx, coefIdx+69, hwCoefWords)
 			}
 
@@ -855,7 +864,7 @@ func buildSlotPlanNodes(nodes []planNode) (slotPlan, error) {
 
 			pb := coefIdx
 			if coefIdx+12 > hwCoefWords {
-				return p, fmt.Errorf("Coefficient RAM too small: AnalogX POLY needs %d..%d, each bank has only %d words",
+				return p, newCapacityError("coefs", coefIdx+11, hwCoefWords, "Coefficient RAM too small: AnalogX POLY needs %d..%d, each bank has only %d words",
 					coefIdx, coefIdx+11, hwCoefWords)
 			}
 			for _, v := range n.Poly {
@@ -913,7 +922,7 @@ func buildSlotPlanNodes(nodes []planNode) (slotPlan, error) {
 
 			pb := coefIdx
 			if coefIdx+12 > hwCoefWords {
-				return p, fmt.Errorf("Coefficient RAM too small: harmonic exciter needs %d..%d, each bank has only %d words",
+				return p, newCapacityError("coefs", coefIdx+11, hwCoefWords, "Coefficient RAM too small: harmonic exciter needs %d..%d, each bank has only %d words",
 					coefIdx, coefIdx+11, hwCoefWords)
 			}
 			for _, v := range n.Poly {
@@ -970,7 +979,7 @@ func buildSlotPlanNodes(nodes []planNode) (slotPlan, error) {
 				return p, fmt.Errorf("FIR MACS block count must be a power of 2 (got %d): slot CFG field n uses log2 encoding", blocks)
 			}
 			if (firMACS << lg) > firTaps {
-				return p, fmt.Errorf("FIR needs %d taps, exceeds unit limit %d", firMACS<<lg, firTaps)
+				return p, newCapacityError("firtaps", firMACS<<lg, firTaps, "FIR needs %d taps, exceeds unit limit %d", firMACS<<lg, firTaps)
 			}
 
 			irMu.Lock()
@@ -1063,7 +1072,7 @@ func buildSlotPlanNodes(nodes []planNode) (slotPlan, error) {
 			}
 			L := n.Len
 			if L < 1 || L > hwDelayWords {
-				return p, fmt.Errorf("ViPERBass PBP wet delay %d samples exceeds delay ring %d words",
+				return p, newCapacityError("delaywords", L, hwDelayWords, "ViPERBass PBP wet delay %d samples exceeds delay ring %d words",
 					L, hwDelayWords)
 			}
 			base := bus
@@ -1156,7 +1165,7 @@ func buildSlotPlanNodes(nodes []planNode) (slotPlan, error) {
 				return p, fmt.Errorf("Delay length must be >=1 (got %d)", L)
 			}
 			if L > hwDelayWords {
-				return p, fmt.Errorf("Delay %d samples exceeds limit %d (per-channel delay ring is only %d words = %.1f ms @48k)",
+				return p, newCapacityError("delaywords", L, hwDelayWords, "Delay %d samples exceeds limit %d (per-channel delay ring is only %d words = %.1f ms @48k)",
 					L, hwDelayWords, hwDelayWords, float64(hwDelayWords)/48.0)
 			}
 			base := coefIdx
@@ -1183,7 +1192,9 @@ func buildSlotPlanNodes(nodes []planNode) (slotPlan, error) {
 				p.Coefs = append(p.Coefs, v)
 			}
 			coefIdx += 5
-			emit(opBiquad, 1, loBase, sec, bus, 0xFFFF, crossLoBus)
+			if err := emit(opBiquad, 1, loBase, sec, bus, 0xFFFF, crossLoBus); err != nil {
+				return p, err
+			}
 			sec++
 
 			hiBase := coefIdx
@@ -1191,7 +1202,9 @@ func buildSlotPlanNodes(nodes []planNode) (slotPlan, error) {
 				p.Coefs = append(p.Coefs, v)
 			}
 			coefIdx += 5
-			emit(opBiquad, 1, hiBase, sec, bus, 0xFFFF, bus+1)
+			if err := emit(opBiquad, 1, hiBase, sec, bus, 0xFFFF, bus+1); err != nil {
+				return p, err
+			}
 			sec++
 
 			mixBase := coefIdx
@@ -1251,12 +1264,12 @@ func buildSlotPlanNodes(nodes []planNode) (slotPlan, error) {
 	}
 
 	if peakBus >= crossLoBus || bus >= crossLoBus {
-		return p, fmt.Errorf("Out of buses: this chain needs bus %d, but %d/%d are engine-reserved"+
+		return p, newCapacityError("buses", peakBus, crossLoBus, "Out of buses: this chain needs bus %d, but %d/%d are engine-reserved"+
 			"(cross-channel / DYN sidechain) - drop one effect that needs its own bus",
 			peakBus, crossLoBus, dynScratchBus)
 	}
 	if coefIdx > hwCoefWords {
-		return p, fmt.Errorf("Out of coefficient RAM: this chain needs %d words, each bank has only %d",
+		return p, newCapacityError("coefs", coefIdx, hwCoefWords, "Out of coefficient RAM: this chain needs %d words, each bank has only %d",
 			coefIdx, hwCoefWords)
 	}
 

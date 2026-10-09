@@ -13,14 +13,14 @@ BOOT.BIN = FSBL + zybo_audio.bit + U-Boot
 | Part | Origin | License note |
 |---|---|---|
 | FSBL | Vivado 2024.1 `embeddedsw` (`lib/sw_apps/zynq_fsbl`), compiled with the `.xsa` below | Xilinx MIT (+ `md5.c` Eric Young attribution, see THIRD-PARTY.md) |
-| `system.bit` | `zybo-dsp` tag `v0.3.0`, built with Vivado 2024.1 (`scripts/build_retry.sh`), hash in `SHA256SUMS` | GPL-2.0 (own RTL) + Xilinx EULA (Xilinx IP, runs only on Xilinx silicon) |
+| `system.bit` | `zybo-dsp` tag `v0.4.0`, built with Vivado 2024.1 (`scripts/build_retry.sh`), hash in `SHA256SUMS` | GPL-2.0 (own RTL) + Xilinx EULA (Xilinx IP, runs only on Xilinx silicon) |
 | U-Boot | upstream `v2024.01` stock binary for ZYBO | GPL-2.0+ (sources: upstream tag) |
 
 ## Reproduce it
 
 ```bash
 # 1. bitstream (needs Vivado 2024.1, batch mode)
-git clone <zybo-dsp> && cd zybo-dsp && git checkout v0.3.0
+git clone <zybo-dsp> && cd zybo-dsp && git checkout v0.4.0
 bash scripts/fetch_ip.sh
 bash scripts/build_retry.sh 3 -tclargs -force
 # → build/fpga/zybo_audio/zybo_audio.{bit,xsa}
@@ -35,11 +35,11 @@ bootgen -image boot.bif -o BOOT.BIN
 Compare your output against `SHA256SUMS`. Bit-identical output is **not**
 expected across Vivado runs (timestamps); what must match is the
 functionality gate: boot it, read `CAP0..CAP4` (see `zybo-dsp/CONTRACT.md`),
-`CAP1` bit7 must read 0.
+`CAP1` bit7 must read 1 (second FIR present; `CAP4` carries the SFIR geometry).
 
 ## If the hashes don't match
 
 1. Check `pins.env` — a moved upstream pin is the usual cause.
 2. Rebuild the bitstream and compare synthesis utilization
-   (reference: 14901 LUT / 8032 FF / 50 BRAM / 47 DSP for the audio IP).
+   (reference, routed full design: 14526 Slice LUTs / 10162 FF / 52.5 BRAM / 47 DSP).
 3. Never ship a BOOT.BIN whose CAPs you haven't read back.

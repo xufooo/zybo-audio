@@ -320,7 +320,7 @@ func restoreRuntimeState() {
 	}
 	if err := applyChain(st.Chain, st.PreampDB, st.GainDB); err != nil {
 		log.Printf("Failed to restore chain (running flat): %v", err)
-		if err := applyChain(nil, 0, 0); err != nil {
+		if err := applyChain(preserveResourceChainItems(nil, currentUserChain), 0, 0); err != nil {
 			log.Printf("Even the flat chain failed to deploy: %v", err)
 		}
 		return

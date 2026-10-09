@@ -12,6 +12,8 @@ import (
 	"strings"
 )
 
+const typeNameCustom = "\u81ea\u5b9a\u4e49"
+
 func handleDSPCapabilities(w http.ResponseWriter, r *http.Request) {
 	types := make([]string, 0, len(chainTypeToSlot))
 	seen := map[string]bool{}
@@ -97,7 +99,7 @@ func handleDSPCapabilities(w http.ResponseWriter, r *http.Request) {
 		"on":          currentClarity != nil,
 		"view":        clarityView(),
 		"modes":       []string{"natural", "ozone", "xhifi"},
-		"level_range": []float64{0, 100},
+		"level_range": []float64{0, 200},
 		"xhifi_slots": 2,
 		"delay_slots": hwDelaySlots,
 		"unsupported": []string{},
@@ -668,7 +670,13 @@ func handleDSPChain(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		effChain := preserveResourceChainItems(req.Chain, currentUserChain)
+		effChain := req.Chain
+		if req.Type == "" || req.Type == typeNameCustom {
+			effChain = preserveResourceChainItems(req.Chain, currentUserChain)
+		} else {
+			ddcClear()
+			currentFIR = nil
+		}
 		_, active, err := chainToSlots(effChain)
 		if err != nil {
 

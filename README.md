@@ -63,3 +63,5 @@ NODE_PATH=tools/webui-check/node_modules node tools/webui_smoke.js webui/index.h
 
 - `v0.3.0` — matches the `v0.3.0` bitstream: no second FIR
   (`CAP1` bit7 = 0, PBP cleanly refused), no preset cards.
+- `v0.4.0` — matches the `v0.4.0` bitstream: second FIR back
+  (`CAP1` bit7 = 1, PBP works), 40 sections / 24 slots, no preset cards.

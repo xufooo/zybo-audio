@@ -214,8 +214,63 @@ func TestClarityXHIFIIsImplemented(t *testing.T) {
 		}
 	}
 
-	if err := setClarity(&clarityParams{Mode: clarityModeOzone, Level: 101}); err == nil {
-		t.Error("level over 100 must fail")
+	if err := setClarity(&clarityParams{Mode: clarityModeOzone, Level: 201}); err == nil {
+		t.Error("level over 200 must fail")
+	}
+	currentClarity = nil
+}
+
+func TestClarityLevelCeiling(t *testing.T) {
+	qmax := float64(131071)
+	ceil := func(name string, coefs func(lv float64) [5]int32) int {
+		top := -1
+		for lv := 0.0; lv <= 450; lv++ {
+			mx := 0.0
+			for _, v := range coefs(lv) {
+				if a := math.Abs(float64(v)); a > mx {
+					mx = a
+				}
+			}
+			if mx > qmax {
+				top = int(lv) - 1
+				break
+			}
+		}
+		if top < 0 {
+			top = 450
+		}
+		t.Logf("%s Q3.15 ceiling = %d", name, top)
+		return top
+	}
+	if got := ceil("natural",
+		func(lv float64) [5]int32 { return noiseSharpeningBiquad(48000, lv/100.0) }); got != 426 {
+		t.Errorf("natural ceiling should be 426, got %d (coefficient formula changed? re-evaluate the setClarity cap)", got)
+	}
+	if got := ceil("ozone",
+		func(lv float64) [5]int32 { return highShelfOzone(8250.0, 48000, lv/100.0+1.0) }); got != 450 {
+		t.Errorf("ozone ceiling should be 450 (reachable throughout), got %d", got)
+	}
+	xhi := -1
+	for lv := 0.0; lv <= 450; lv++ {
+		raw := 1.2 * (lv/100.0 + 1.0) * 32768.0
+		if raw > 131071 {
+			xhi = int(lv) - 1
+			break
+		}
+	}
+	if xhi < 0 {
+		xhi = 450
+	}
+	t.Logf("xhifi-mix Q3.15 ceiling (exact values) = %d", xhi)
+	if xhi != 233 {
+		t.Errorf("XHIFI ceiling should be 233, got %d", xhi)
+	}
+	for _, m := range []int{clarityModeNatural, clarityModeOzone, clarityModeXHIFI} {
+		for _, lv := range []float64{150, 200} {
+			if err := setClarity(&clarityParams{Mode: m, Level: lv}); err != nil {
+				t.Errorf("setClarity(mode=%d, level=%g) should not fail: %v", m, lv, err)
+			}
+		}
 	}
 	currentClarity = nil
 }

@@ -261,31 +261,42 @@ func chainFromSlots() []ChainItem {
 }
 
 type chainStateSnapshot struct {
-	dyn     *dynParams
-	dynbass *dynamicBassParams
-	cross   *crossfeedParams
-	sur     *surroundParams
-	exc     *exciterParams
-	bass    *viperBassParams
-	tube    *tubeParams
-	col     *colorfulParams
-	clarity *clarityParams
-	spk     *speakerCorrectionParams
-	analogx *analogxParams
-	chain   []ChainItem
-	slots   [maxBands]slotConfig
-	preamp  float64
-	gain    float64
+	dyn       *dynParams
+	dynbass   *dynamicBassParams
+	cross     *crossfeedParams
+	sur       *surroundParams
+	exc       *exciterParams
+	bass      *viperBassParams
+	tube      *tubeParams
+	col       *colorfulParams
+	clarity   *clarityParams
+	spk       *speakerCorrectionParams
+	analogx   *analogxParams
+	fir       *firParams
+	ddc       [][5]int32
+	ddcNative bool
+	ddcName   string
+	ddcRate   int
+	chain     []ChainItem
+	slots     [maxBands]slotConfig
+	preamp    float64
+	gain      float64
 
 	typeName string
 }
 
 func captureChainState() chainStateSnapshot {
+	ddcMu.Lock()
+	ddcCopy := append([][5]int32(nil), ddcSections...)
+	ddcNative, ddcName, ddcRate := ddcNative, ddcName, ddcRate
+	ddcMu.Unlock()
 	return chainStateSnapshot{
 		dyn: currentDynBass, dynbass: currentDynamicBass,
 		cross: currentCrossfeed, sur: currentSurround,
 		exc: currentExciter, bass: currentViPERBass, tube: currentTube, col: currentColorful,
 		clarity: currentClarity, spk: currentSpeakerCorrection, analogx: currentAnalogX,
+		fir: currentFIR,
+		ddc: ddcCopy, ddcNative: ddcNative, ddcName: ddcName, ddcRate: ddcRate,
 		chain: currentUserChain, slots: currentSlots,
 		preamp: currentPreampDB, gain: chainGainDB,
 		typeName: selectedTypeName,
@@ -301,6 +312,10 @@ func (s chainStateSnapshot) restore() {
 	currentClarity = s.clarity
 	currentSpeakerCorrection = s.spk
 	currentAnalogX = s.analogx
+	currentFIR = s.fir
+	ddcMu.Lock()
+	ddcSections, ddcNative, ddcName, ddcRate = s.ddc, s.ddcNative, s.ddcName, s.ddcRate
+	ddcMu.Unlock()
 	currentUserChain, currentSlots = s.chain, s.slots
 	currentPreampDB, chainGainDB = s.preamp, s.gain
 	selectedTypeName = s.typeName

@@ -227,9 +227,10 @@ func TestDelayPlanLayout(t *testing.T) {
 	}
 
 	mix = append(mix, planNode{Kind: planKindBiquad, Coefs: [5]int32{32768, 0, 0, 0, 0}})
+	mix = append(mix, planNode{Kind: planKindBiquad, Coefs: [5]int32{32768, 0, 0, 0, 0}})
 	if _, err := buildSlotPlanNodes(mix); err == nil {
-		t.Errorf("%d EQ sections + delay slot need %d words > coefficient RAM %d words and should fail",
-			maxSections, (maxSections+1)*coefPerBand, coefWordsPerBank)
+		t.Errorf("%d EQ sections + delay slot exceed the %d-section cap and should fail",
+			maxSections+1, maxSections)
 	}
 }
 

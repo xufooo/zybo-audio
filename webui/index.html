@@ -247,7 +247,7 @@ const CAPS = [
           {t:'rng', k:'rel_ms', label:'Release', min:10, max:2000, step:10, unit:' ms'}]},
  {k:'clarity', name:'Clarity', cost:'1 slot', api:'clarity',
   fields:[{t:'seg', k:'mode', label:'Mode', opts:[['natural','Natural'],['ozone','Ozone'],['xhifi','XHiFi']]},
-          {t:'rng', k:'level', label:'Strength', min:0, max:100, step:1}]},
+          {t:'rng', k:'level', label:'Strength', min:0, max:200, step:1}]},
  {k:'vse', name:'Harmonic exciter', cost:'4 slots', api:'vse',
   fields:[{t:'rng', k:'gear', label:'Gear', min:0.1, max:1, step:0.1}]},
  {k:'tube', name:'Tube warmth', cost:'1 slot', api:'tube', fields:[]},
@@ -305,6 +305,9 @@ const DEF = {
 
 let S = JSON.parse(JSON.stringify(DEF));
 let curCard = '';
+// Remember which capability rows are expanded: renderCaps rebuilds all rows (every successful dispatch ends in refresh), 
+//without it an expanded row collapses as soon as you touch a slider (reported 2026-10-09). 
+const openCaps = new Set();
 let timer = null;
 // Custom cards live in backend type 'My effects'; one card = one effect {kind:'combo', desc: the caps as JSON}
 // (Params holds numbers only; mode/coeffs/bands do not fit together; the backend passes effects through, the panel owns the convention) 
@@ -374,6 +377,18 @@ const clone = o => JSON.parse(JSON.stringify(o));
 
 /* ── Sound cards ── */
 function applyCard(card){
+  // Clicking a lit card again dims it: everything below turns off, back to manual setup. 
+  // EQ bands are cleared too -- when dimming is reachable the bands are the card's (any manual edit clears curCard first). 
+  // so clearing bands cannot drop manual work. 
+  // Limiter/overall gain/convolver/DDC are untouched (protection/global/separate pages). 
+  if(curCard === card.name){
+    const keepGain = clone(S.gain), keepLim = clone(S.limiter);
+    for(const k of Object.keys(S)) if(S[k] && typeof S[k].on === 'boolean') S[k].on = false;
+    S.gain = keepGain; S.limiter = keepLim;
+    S.eq.bands = [];
+    curCard = '';
+    renderAll(); schedule(); return;
+  }
   // start from the **current state**: only flip on/off and set the values the card actually writes; every other value is **kept as it is**
   // (values are kept even while off, that is the existing rule); otherwise picking a card would wipe the EQ bands you had tuned.
   const next = clone(S);
@@ -680,7 +695,7 @@ function renderCaps(){
   for(const cap of CAPS){
     const st = S[cap.k];
     const el = document.createElement('div');
-    el.className = 'cap' + (st.on ? ' on' : '');
+    el.className = 'cap' + (st.on ? ' on' : '') + (openCaps.has(cap.k) ? ' open' : '');
     const head = document.createElement('div');
     head.className = 'hd';
     head.dataset.hd = cap.k;
@@ -738,7 +753,13 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('click', e => {
   const hd = e.target.closest('[data-hd]');
-  if(hd && !e.target.closest('[data-sw]')){ hd.parentElement.classList.toggle('open'); return; }
+  if(hd && !e.target.closest('[data-sw]')){
+    const el = hd.parentElement;
+    el.classList.toggle('open');
+    if(el.classList.contains('open')) openCaps.add(hd.dataset.hd);
+    else openCaps.delete(hd.dataset.hd);
+    return;
+  }
   const sw = e.target.closest('[data-sw]');
   if(sw){ const k = sw.dataset.sw; S[k].on = !S[k].on; curCard=''; renderAll(); schedule(); return; }
   const sg = e.target.closest('.seg button[data-cap]');

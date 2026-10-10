@@ -5,8 +5,8 @@
 # workflows (hardware bitstream, kernel uImage, rootfs, boot stage, software
 # already inside rootfs) and packs BOOT.BIN + partitions + .img.
 #
-# Requires a self-hosted runner with Vivado 2024.1 (bootgen ships with
-# Vivado and has no cloud substitute). See docs/ for runner setup.
+# Pure cloud: bootgen builds from open source (Xilinx/bootgen, Apache-2.0)
+# pinned below, so no Vivado / self-hosted runner is needed anywhere.
 # Manual trigger only; inputs pin the exact layer runs to assemble.
 name: image
 on:
@@ -31,7 +31,7 @@ on:
 
 jobs:
   assemble:
-    runs-on: [self-hosted, vivado]
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -63,11 +63,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Pack BOOT.BIN (bootgen, Vivado required)
+      - name: Build bootgen from source
         run: |
           set -euo pipefail
           # shellcheck disable=SC1091
-          source /opt/Xilinx/Vivado/2024.1/settings64.sh
+          source <(grep -E '^BOOTGEN_(TAG|REPO)=' pins.env)
+          sudo apt-get update
+          sudo apt-get install -y g++ bison flex libssl-dev
+          git clone --depth 1 --branch "$BOOTGEN_TAG" "$BOOTGEN_REPO" bootgen-src
+          make -C bootgen-src -j"$(nproc)"
+          ./bootgen-src/build/bin/bootgen 2>&1 | head -3 || true
+
+      - name: Pack BOOT.BIN (open-source bootgen)
+        run: |
+          set -euo pipefail
           cp layers/boot/fsbl.elf layers/boot/u-boot.elf .
           cp layers/hw/system.bit .
           cat > boot_image.bif <<'BIF'
@@ -79,7 +88,7 @@ jobs:
               u-boot.elf
           }
           BIF
-          bootgen -image boot_image.bif -o BOOT.BIN
+          ../bootgen-src/build/bin/bootgen -image boot_image.bif -o BOOT.BIN
           ls -la BOOT.BIN
 
       - name: Assemble SD image

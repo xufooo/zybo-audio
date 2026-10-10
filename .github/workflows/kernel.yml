@@ -66,7 +66,7 @@ jobs:
           # scripts/setlocalversion stamps the release "-dirty" (a version
           # string that matches no commit). Untracked build output (.config
           # etc.) is ignored by the kernel .gitignore and stays out.
-          git -c user.name=zybo-audio-ci -c user.email=ci@local add             arch/arm/boot/dts/zybo-audio.dtb arch/arm/boot/dts/zybo-audio.dts             arch/arm/boot/dts/Makefile             drivers/net/wireless/realtek/rtl8xxxu/rtl8xxxu_core.c
+          git -c user.name=zybo-audio-ci -c user.email=ci@local add             arch/arm/boot/dts/zybo-audio.dts             arch/arm/boot/dts/Makefile             drivers/net/wireless/realtek/rtl8xxxu/rtl8xxxu_core.c
           git -c user.name=zybo-audio-ci -c user.email=ci@local commit -qm "board inputs"
 
       - name: Build zImage + dtbs

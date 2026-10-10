@@ -1,0 +1,96 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# kernel — build the board kernel (uImage FIT) from pinned inputs + patches.
+#
+# Inputs (all pinned, nothing vendored): LINUX_XLNX_TAG/REPO from pins.env,
+# linux/config.fragment, linux/zybo-audio.dts, linux/patches/*. The rtl8xxxu
+# driver is built in, so the board needs only the uImage file itself — no
+# /lib/modules sync (the running system has no modules at all).
+#
+# Manual trigger only: kernel builds are slow and a new uImage always needs
+# a board reboot + verification, so this never runs on push.
+name: kernel
+on:
+  workflow_dispatch:
+    inputs:
+      rel:
+        description: "Release suffix for the artifact (e.g. f3)"
+        required: true
+        default: "f3"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read pins
+        run: |
+          set -euo pipefail
+          grep -E '^LINUX_XLNX_(TAG|REPO)=' pins.env | tee /tmp/kpins
+          grep -E '^LINUX_BOARD_PATCHES=' pins.env | tee -a /tmp/kpins || true
+          git rev-parse HEAD | tee /tmp/inputs-sha
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-linux-gnueabihf bc flex bison \
+            libssl-dev u-boot-tools device-tree-compiler
+
+      - name: Fetch kernel sources
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC1091
+          source /tmp/kpins
+          git clone --depth 1 --branch "$LINUX_XLNX_TAG" "$LINUX_XLNX_REPO" linux-xlnx
+
+      - name: Apply board inputs
+        run: |
+          set -euo pipefail
+          cd linux-xlnx
+          cp ../linux/zybo-audio.dts arch/arm/boot/dts/
+          grep -q 'zybo-audio.dtb' arch/arm/boot/dts/Makefile \
+            || echo 'dtb-$(CONFIG_ARCH_ZYNQ) += zybo-audio.dtb' >> arch/arm/boot/dts/Makefile
+          export ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-
+          make xilinx_zynq_defconfig
+          ./scripts/kconfig/merge_config.sh -m .config ../linux/config.fragment
+          make olddefconfig
+          # shellcheck disable=SC1091
+          source /tmp/kpins
+          # shellcheck disable=SC2086
+          for p in $LINUX_BOARD_PATCHES; do
+            git apply --check "../$p"
+            git apply -v "../$p"
+          done
+
+      - name: Build zImage + dtbs
+        run: |
+          cd linux-xlnx
+          export ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-
+          make -j"$(nproc)" zImage dtbs
+          make kernelrelease | tee /tmp/kernelrelease
+
+      - name: Pack FIT uImage
+        run: |
+          set -euo pipefail
+          rm -rf out && mkdir out
+          cp linux-xlnx/arch/arm/boot/zImage out/
+          cp linux-xlnx/arch/arm/boot/dts/zybo-audio.dtb out/
+          cp linux/zybo-audio.its out/
+          (cd out && mkimage -f zybo-audio.its uImage)
+          # shellcheck disable=SC1091
+          source /tmp/kpins
+          {
+            echo "upstream: $LINUX_XLNX_REPO @ $LINUX_XLNX_TAG"
+            echo "inputs-sha: $(cat /tmp/inputs-sha)"
+            echo "kernelrelease: $(cat /tmp/kernelrelease)"
+            echo "patches: $LINUX_BOARD_PATCHES"
+            echo "rel: ${{ inputs.rel }}"
+          } | tee out/build-info.txt
+          (cd out && sha256sum uImage zImage zybo-audio.dtb | tee SHA256SUMS)
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uImage-${{ inputs.rel }}
+          path: out/

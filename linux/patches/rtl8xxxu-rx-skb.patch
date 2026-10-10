@@ -15,7 +15,9 @@
 #
 # Origin: torvalds/linux d76a1abcf577 ("wifi: rtl8xxxu: Fix RX skb size for
 # aggregation disabled", 2025-07-09). Fixes: 1e5b3b3fe9e0 (2016).
-# Applicability: verified to apply cleanly against LINUX_XLNX_TAG
+# Applicability: verified with git apply --check against the 6.6.80 file
+# fetched from LINUX_XLNX_TAG (path adapted: 6.6 still uses rtl8xxxu_core.c;
+# upstream renamed it to core.c in 6.12+. Original applicability note below:
 # (xlnx_rebase_v6.6_LTS_2024.1_merge_6.6.80) — see .github/workflows/kernel.yml,
 # which runs `git apply --check` first and fails loudly on mismatch.
 # ---------------------------------------------------------------------------
@@ -40,14 +42,14 @@ Reviewed-by: Ping-Ke Shih <pkshih@realtek.com>
 Signed-off-by: Ping-Ke Shih <pkshih@realtek.com>
 Link: https://patch.msgid.link/20250709121522.1992366-1-martin.kaistra@linutronix.de
 ---
- drivers/net/wireless/realtek/rtl8xxxu/core.c | 2 +-
+ drivers/net/wireless/realtek/rtl8xxxu/rtl8xxxu_core.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/net/wireless/realtek/rtl8xxxu/core.c b/drivers/net/wireless/realtek/rtl8xxxu/core.c
-index 496836f716aa12..f6f169d2062d9d 100644
---- a/drivers/net/wireless/realtek/rtl8xxxu/core.c
-+++ b/drivers/net/wireless/realtek/rtl8xxxu/core.c
-@@ -6618,7 +6618,7 @@ static int rtl8xxxu_submit_rx_urb(struct rtl8xxxu_priv *priv,
+index 000000000000..000000000000 100644
+--- a/drivers/net/wireless/realtek/rtl8xxxu/rtl8xxxu_core.c
++++ b/drivers/net/wireless/realtek/rtl8xxxu/rtl8xxxu_core.c
+@@ -6490,7 +6490,7 @@ static int rtl8xxxu_submit_rx_urb(struct rtl8xxxu_priv *priv,
  		skb_size = fops->rx_agg_buf_size;
  		skb_size += (rx_desc_sz + sizeof(struct rtl8723au_phy_stats));
  	} else {

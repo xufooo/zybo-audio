@@ -21,6 +21,13 @@ jobs:
       - run: go test ./...
       - name: cross-compile for ZYBO (ARMv7 static)
         run: CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -trimpath -o /tmp/zybo-audio-web .
+      # Published for the image workflow (software layer artifact); the
+      # binary embeds appVersion, the commit SHA is recorded by the run.
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zybo-audio-web-arm
+          path: /tmp/zybo-audio-web
 
   gates:
     runs-on: ubuntu-latest
@@ -41,3 +48,9 @@ jobs:
       - run: npm ci --prefix tools/webui-check
       - name: Panel smoke (no built-in cards expected)
         run: NODE_PATH=tools/webui-check/node_modules node tools/webui_smoke.js webui/index.html 0
+      # Published for the image workflow (software layer artifact).
+      - name: Upload panel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: webui-en
+          path: webui/index.html

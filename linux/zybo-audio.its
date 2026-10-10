@@ -1,0 +1,50 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// zybo-audio.its - FIT image description (kernel + dtb).
+//
+// Packs the kernel and device tree into one file; bootm loads straight
+// from the FIT. The bitstream stays a separate file, programmed by
+// `fpga loadb` in boot.scr - the shape the current U-Boot already runs.
+//
+// Build (zImage and zybo-audio.dtb next to this file):
+//   mkimage -f zybo-audio.its uImage
+/dts-v1/;
+
+/ {
+	description = "ZYBO audio player (kernel + dtb)";
+	#address-cells = <1>;
+
+	images {
+		kernel {
+			description = "Linux 6.6.80-xilinx";
+			data = /incbin/("zImage");
+			type = "kernel";
+			arch = "arm";
+			os = "linux";
+			compression = "none";
+			// Same load/entry as the running uImage (0x8000),
+			// i.e. the address set today's bootm already uses.
+			load = <0x00008000>;
+			entry = <0x00008000>;
+			hash-1 { algo = "sha256"; };
+		};
+
+		fdt {
+			description = "ZYBO Rev B device tree";
+			data = /incbin/("zybo-audio.dtb");
+			type = "flat_dt";
+			arch = "arm";
+			compression = "none";
+			load = <0x02A00000>;
+			hash-1 { algo = "sha256"; };
+		};
+	};
+
+	configurations {
+		default = "conf";
+		conf {
+			description = "ZYBO audio";
+			kernel = "kernel";
+			fdt = "fdt";
+		};
+	};
+};

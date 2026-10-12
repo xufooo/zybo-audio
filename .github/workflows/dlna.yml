@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: GPL-2.0-only
-# dlna — cross-build gmrender-resurrect (UPnP/DLNA renderer) for armhf.
+# dlna — build gmrender-resurrect for armhf INSIDE Debian trixie.
 #
-# Why from source instead of the Debian package: the trixie build exhibits
-# a broken URI handoff (playbin always receives the literal string "%s",
-# every Play segfaults; verified on hardware with GST_DEBUG). Building the
-# pinned upstream tag lets us test fixes and carry local patches.
+# Non-negotiable rule learned 2026-10-12: build libs must equal run libs.
+# An earlier revision cross-built on Ubuntu noble (libupnp .18 / glib 2.80 /
+# gstreamer 1.24) while the board runs trixie (.20 / 2.84 / 1.26) — heap
+# corruption and mystery crashes followed. This workflow compiles inside a
+# trixie armhf container (qemu), so build-time and run-time libraries are
+# the same distribution by construction.
 # Manual trigger only. Output feeds board testing directly (/usr/local/bin
 # override — backend finds it via PATH before /usr/bin).
 name: dlna
@@ -19,48 +21,55 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install armhf cross toolchain + dev libraries
-        run: |
-          echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ noble main universe" | sudo tee /etc/apt/sources.list.d/armhf-ports.list
-          echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ noble-updates main universe" | sudo tee -a /etc/apt/sources.list.d/armhf-ports.list
-          echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ noble-security main universe" | sudo tee -a /etc/apt/sources.list.d/armhf-ports.list
-          sudo dpkg --add-architecture armhf
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            gcc-arm-linux-gnueabihf autoconf automake libtool pkg-config \
-            libupnp-dev:armhf libglib2.0-dev:armhf \
-            libgstreamer1.0-dev:armhf libgstreamer-plugins-base1.0-dev:armhf
-
-      - name: Fetch sources
+      - name: Read pins
         run: |
           set -euo pipefail
           grep -E '^GMRENDER_(TAG|REPO)=' pins.env | tee /tmp/gpins
+          [ "${{ inputs.ref }}" = "$(grep '^GMRENDER_TAG=' pins.env | cut -d= -f2)" ] \
+            || { echo "::error::ref must match pins.env GMRENDER_TAG"; exit 1; }
+
+      - name: Register qemu binfmt (armhf containers)
+        run: docker run --rm --privileged tonistiigi/binfmt --install armhf || true
+
+      - name: Build inside trixie armhf container
+        env:
+          GMRENDER_TAG: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
           # shellcheck disable=SC1091
           source /tmp/gpins
-          [ "${{ inputs.ref }}" = "$GMRENDER_TAG" ] || { echo "::error::ref must match pins.env GMRENDER_TAG"; exit 1; }
-          git clone --depth 1 --branch "$GMRENDER_TAG" "$GMRENDER_REPO" gmrender
-          (cd gmrender && git rev-parse HEAD | tee /tmp/upstream-sha)
-
-      - name: Build
-        run: |
-          cd gmrender
-          export PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig
-          ./autogen.sh
-          ./configure --host=arm-linux-gnueabihf --prefix=/usr
-          make -j"$(nproc)"
-          file src/gmediarender
-          mkdir -p ../out
-          cp src/gmediarender ../out/
+          mkdir -p out
+          docker run --rm --platform linux/arm/v7 \
+            -e GMRENDER_TAG="$GMRENDER_TAG" -e GMRENDER_REPO="$GMRENDER_REPO" \
+            -v "$PWD/out:/out" \
+            debian:trixie-slim bash -c '
+              set -euo pipefail
+              apt-get update
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+                git ca-certificates gcc autoconf automake libtool pkg-config \
+                libupnp-dev libglib2.0-dev \
+                libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+              git clone --depth 1 --branch "$GMRENDER_TAG" "$GMRENDER_REPO" /tmp/gmrender
+              (cd /tmp/gmrender && git rev-parse HEAD > /out/upstream-sha)
+              cd /tmp/gmrender
+              ./autogen.sh
+              ./configure --prefix=/usr
+              make -j"$(nproc)"
+              file src/gmediarender
+              cp src/gmediarender /out/
+              cat /etc/os-release | head -2 > /out/build-env.txt
+              dpkg -l libupnp-dev libglib2.0-dev libgstreamer1.0-dev 2>/dev/null | grep ^ii > /out/build-libs.txt || true
+              (cd /out && sha256sum gmediarender | tee SHA256SUMS)
+            '
           {
             echo "upstream: $(cat /tmp/gpins | tr '\n' ' ')"
-            echo "upstream-sha: $(cat /tmp/upstream-sha)"
-            echo "inputs-sha: $(cd .. && git rev-parse HEAD)"
-          } | tee ../out/build-info.txt
-          (cd ../out && sha256sum gmediarender | tee SHA256SUMS)
+            echo "upstream-sha: $(cat out/upstream-sha)"
+            echo "inputs-sha: $(git rev-parse HEAD)"
+          } | tee out/build-info.txt
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

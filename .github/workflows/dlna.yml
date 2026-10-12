@@ -56,7 +56,8 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             gcc-arm-linux-gnueabihf autoconf automake libtool pkg-config \
             libupnp-dev:armhf libglib2.0-dev:armhf \
-            libgstreamer1.0-dev:armhf libgstreamer-plugins-base1.0-dev:armhf
+            libgstreamer1.0-dev:armhf libgstreamer-plugins-base1.0-dev:armhf \
+            libglib2.0-dev-bin libglib2.0-dev-bin-linux
 
       - name: Fetch sources
         run: |

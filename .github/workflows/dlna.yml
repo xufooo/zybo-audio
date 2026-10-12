@@ -17,6 +17,10 @@ on:
         description: "Upstream ref (tag/SHA, must match pins.env)"
         required: false
         default: "v0.3.1"
+      asan:
+        description: "AddressSanitizer build (debug only)"
+        required: false
+        default: "false"
 
 jobs:
   build:
@@ -45,6 +49,7 @@ jobs:
           mkdir -p out
           docker run --rm --platform linux/arm/v7 \
             -e GMRENDER_TAG="$GMRENDER_TAG" -e GMRENDER_REPO="$GMRENDER_REPO" \
+            -e ASAN="${{ inputs.asan }}" \
             -v "$PWD/out:/out" \
             debian:trixie-slim bash -c '
               set -euo pipefail
@@ -58,7 +63,11 @@ jobs:
               cd /tmp/gmrender
               ./autogen.sh
               ./configure --prefix=/usr
-              make -j"$(nproc)"
+              if [ "${ASAN}" = "true" ]; then
+                make -j"$(nproc)" CFLAGS="-g -O1 -fsanitize=address" LDFLAGS="-fsanitize=address"
+              else
+                make -j"$(nproc)"
+              fi
               file src/gmediarender
               cp src/gmediarender /out/
               cat /etc/os-release | head -2 > /out/build-env.txt
@@ -74,7 +83,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gmediarender-armhf
+          name: gmediarender-armhf${{ inputs.asan == 'true' && '-asan' || '' }}
           path: out/
           if-no-files-found: error
           retention-days: 14

@@ -1,0 +1,71 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# dlna — cross-build gmrender-resurrect (UPnP/DLNA renderer) for armhf.
+#
+# Why from source instead of the Debian package: the trixie build exhibits
+# a broken URI handoff (playbin always receives the literal string "%s",
+# every Play segfaults; verified on hardware with GST_DEBUG). Building the
+# pinned upstream tag lets us test fixes and carry local patches.
+# Manual trigger only. Output feeds board testing directly (/usr/local/bin
+# override — backend finds it via PATH before /usr/bin).
+name: dlna
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Upstream ref (tag/SHA, must match pins.env)"
+        required: false
+        default: "v0.3.1"
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install armhf cross toolchain + dev libraries
+        run: |
+          echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ noble main universe" | sudo tee /etc/apt/sources.list.d/armhf-ports.list
+          echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ noble-updates main universe" | sudo tee -a /etc/apt/sources.list.d/armhf-ports.list
+          echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ noble-security main universe" | sudo tee -a /etc/apt/sources.list.d/armhf-ports.list
+          sudo dpkg --add-architecture armhf
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc-arm-linux-gnueabihf autoconf automake libtool pkg-config \
+            libupnp-dev:armhf libglib2.0-dev:armhf \
+            libgstreamer1.0-dev:armhf libgstreamer-plugins-base1.0-dev:armhf
+
+      - name: Fetch sources
+        run: |
+          set -euo pipefail
+          grep -E '^GMRENDER_(TAG|REPO)=' pins.env | tee /tmp/gpins
+          # shellcheck disable=SC1091
+          source /tmp/gpins
+          [ "${{ inputs.ref }}" = "$GMRENDER_TAG" ] || { echo "::error::ref must match pins.env GMRENDER_TAG"; exit 1; }
+          git clone --depth 1 --branch "$GMRENDER_TAG" "$GMRENDER_REPO" gmrender
+          (cd gmrender && git rev-parse HEAD | tee /tmp/upstream-sha)
+
+      - name: Build
+        run: |
+          cd gmrender
+          export PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig
+          ./autogen.sh
+          ./configure --host=arm-linux-gnueabihf --prefix=/usr
+          make -j"$(nproc)"
+          file src/gmediarender
+          mkdir -p ../out
+          cp src/gmediarender ../out/
+          {
+            echo "upstream: $(cat /tmp/gpins | tr '\n' ' ')"
+            echo "upstream-sha: $(cat /tmp/upstream-sha)"
+            echo "inputs-sha: $(cd .. && git rev-parse HEAD)"
+          } | tee ../out/build-info.txt
+          (cd ../out && sha256sum gmediarender | tee SHA256SUMS)
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gmediarender-armhf
+          path: out/
+          if-no-files-found: error
+          retention-days: 14

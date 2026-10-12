@@ -50,7 +50,7 @@ jobs:
               set -euo pipefail
               apt-get update
               DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-                git ca-certificates gcc autoconf automake libtool pkg-config \
+                git ca-certificates gcc make autoconf automake libtool pkg-config \
                 libupnp-dev libglib2.0-dev \
                 libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
               git clone --depth 1 --branch "$GMRENDER_TAG" "$GMRENDER_REPO" /tmp/gmrender

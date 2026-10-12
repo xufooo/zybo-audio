@@ -29,6 +29,29 @@ jobs:
           echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ noble-updates main universe" | sudo tee -a /etc/apt/sources.list.d/armhf-ports.list
           echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ noble-security main universe" | sudo tee -a /etc/apt/sources.list.d/armhf-ports.list
           sudo dpkg --add-architecture armhf
+          # Restrict the stock archives to amd64: otherwise apt asks them
+          # for armhf indexes (404 on security.ubuntu.com) and the whole
+          # update fails. armhf comes only from the ports lines above.
+          sudo python3 - <<'PY'
+          import glob, re
+          for f in glob.glob('/etc/apt/sources.list.d/*.list') + glob.glob('/etc/apt/sources.list'):
+              try:
+                  t = open(f).read()
+              except OSError:
+                  continue
+              if 'armhf-ports' in f:
+                  continue
+              t2 = re.sub(r'^deb (?!\S*arch=)', 'deb [arch=amd64] ', t, flags=re.M)
+              if t2 != t:
+                  open(f, 'w').write(t2)
+          for f in glob.glob('/etc/apt/sources.list.d/*.sources'):
+              try:
+                  t = open(f).read()
+              except OSError:
+                  continue
+              if 'Architectures:' not in t:
+                  open(f, 'w').write(t.replace('Types: deb', 'Types: deb\nArchitectures: amd64'))
+          PY
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             gcc-arm-linux-gnueabihf autoconf automake libtool pkg-config \

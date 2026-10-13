@@ -169,3 +169,12 @@ CONFIG_RT2800USB_UNKNOWN=y
 CONFIG_ATH9K_HW=y
 CONFIG_ATH9K_COMMON=y
 CONFIG_ATH9K_HTC=y
+
+# --- Network filesystems (f4: NAS 直挂，跳过 DLNA 转码) -------------------------
+# CIFS/SMB2 内编（=y，随内核走，不折腾模块安装）；NFSv3/v4 客户端同理。
+CONFIG_CIFS=y
+CONFIG_CIFS_SMB2=y
+CONFIG_CIFS_DFS_UPCALL=n
+CONFIG_NFS_FS=y
+CONFIG_NFS_V3=y
+CONFIG_NFS_V4=y

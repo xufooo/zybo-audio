@@ -1,0 +1,180 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# rootfs — build the Debian armhf rootfs (tar.zst + ext4) from pinned inputs.
+#
+# Recipe ported from the archived zybo-debian build-debian-rootfs.yml (same
+# mmdebstrap + qemu-user-static shape, same fakeroot/ext4 gotchas), repointed
+# at this repo's layout: backend/ + webui/ + linux/systemd + linux/rootfs/hooks.
+# shairport-sync comes from apt here (trixie has 4.3.7); the CI-built 5.5.2
+# overlay is a separate follow-up, same as before.
+#
+# Manual trigger only: a new rootfs always needs board verification.
+name: rootfs
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "Debian suite (must match pins.env DEBIAN_SUITE)"
+        required: false
+        default: "trixie"
+      extra_packages:
+        description: "Extra packages, comma separated"
+        required: false
+        default: ""
+
+concurrency:
+  group: zybo-rootfs
+  cancel-in-progress: true
+
+env:
+  # Keep in sync with pins.env DEBIAN_SUITE/DEBIAN_COMPONENTS.
+  BASE_PACKAGES: "systemd,systemd-sysv,systemd-timesyncd,alsa-utils,libasound2-plugins,sox,mpd,mpc,shairport-sync,avahi-daemon,avahi-utils,bluez,bluez-alsa-utils,libasound2-plugin-bluez,i2c-tools,iproute2,iputils-ping,openssh-server,sudo,curl,ca-certificates,locales,tzdata,nano,rsync,mpg123,usbutils,python3,wpasupplicant,iw,rfkill,wireless-regdb,firmware-realtek,firmware-mediatek,firmware-atheros,firmware-misc-nonfree"
+
+jobs:
+  build:
+    name: Build Debian armhf rootfs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: false
+
+      - name: Install tools
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            mmdebstrap qemu-user-static binfmt-support arch-test \
+            debian-archive-keyring e2fsprogs fakeroot zstd
+
+      - name: Check binfmt
+        run: |
+          ls /proc/sys/fs/binfmt_misc/ | grep -i qemu || sudo update-binfmts --enable qemu-arm
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+
+      - name: Build the backend from source (linux/arm)
+        run: |
+          mkdir -p files/webui
+          cd backend
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 \
+            go build -trimpath -ldflags="-s -w" -o ../files/zybo-audio-web .
+          file ../files/zybo-audio-web
+          # -trimpath gate: the released binary must not embed the checkout path
+          if grep -a -q -F "$GITHUB_WORKSPACE" ../files/zybo-audio-web; then
+            echo "::error::the built binary embeds the checkout path (missing -trimpath?)"
+            exit 1
+          fi
+          echo "OK: no build-machine paths in the binary"
+
+      - name: Stage files/ from this repo
+        run: |
+          install -Dm644 webui/index.html                 files/webui/index.html
+          install -Dm644 linux/systemd/zybo-audio-web.service files/zybo-audio-web.service
+          install -Dm644 VERSION THIRD-PARTY.md           files/
+          ( cd files && sha256sum zybo-audio-web zybo-audio-web.service VERSION \
+                THIRD-PARTY.md webui/index.html > SHA256SUMS )
+          ( cd files && sha256sum -c SHA256SUMS )
+
+      - name: Build rootfs (mmdebstrap -> tar + tar.zst)
+        run: |
+          PKGS="$BASE_PACKAGES"
+          if [ -n "${{ github.event.inputs.extra_packages }}" ]; then
+            PKGS="$PKGS,${{ github.event.inputs.extra_packages }}"
+          fi
+          echo "suite=${{ github.event.inputs.suite }}"
+          # ZYBO_FILES lets the hooks reach the staged files/ (asound.state, app, panel).
+          # non-free-firmware must be listed explicitly: the wifi firmware packages
+          # live in that component and mmdebstrap fails without it.
+          sudo ZYBO_FILES="$PWD/files" mmdebstrap \
+            --components=main,contrib,non-free,non-free-firmware \
+            --architectures=armhf \
+            --variant=minbase \
+            --aptopt='Apt::Install-Recommends "true"' \
+            --include="$PKGS" \
+            --hook-dir="$PWD/linux/rootfs/hooks" \
+            --format=tar \
+            "${{ github.event.inputs.suite }}" rootfs.tar 2>&1 | tee mmdebstrap.log
+          zstd -19 -T0 rootfs.tar -o rootfs.tar.zst
+          ls -la rootfs.tar rootfs.tar.zst
+
+      - name: Build ext4 image (optional, for dd)
+        run: |
+          mkdir -p rootfs-dir
+          # NOTE: unpacking and mke2fs must run in the SAME fakeroot session:
+          # tar's chown is only virtual under fakeroot and is lost between
+          # sessions, so splitting them loses non-root owners in the ext4
+          # image (/var/lib/mpd becomes root:root and MPD fails to start).
+          fakeroot -- sh -c '
+            set -e
+            tar -xpf rootfs.tar -C rootfs-dir
+            SIZE_MB=$(( $(du -sm rootfs-dir | cut -f1) + 96 ))
+            mke2fs -t ext4 -L rootfs -d rootfs-dir -F rootfs.ext4 "${SIZE_MB}M"
+          '
+          ls -la rootfs.ext4
+
+      - name: Verify ownership survived into the ext4 image
+        run: |
+          check() {
+            if debugfs -R "stat $1" rootfs.ext4 2>/dev/null | grep -qE "$2"; then
+              echo "  OK   $1  ($2)"
+            else
+              debugfs -R "stat $1" rootfs.ext4 2>/dev/null | grep -E 'User:|Group:|Mode:'
+              echo "::error::ownership/permissions of $1 did not reach ext4 (expected $2)"
+              exit 1
+            fi
+          }
+          check /var/lib/mpd        'User: *102'
+          check /var/lib/mpd/music  'User: *102'
+          check /etc/shadow         'Group: *42'
+          check /usr/bin/sudo       'Mode: *04755'
+          echo "ext4 ownership/permissions preserved"
+
+      - name: Verify defaults landed in the image
+        run: |
+          check() {
+            if debugfs -R "stat $1" rootfs.ext4 >/dev/null 2>&1; then
+              echo "  OK   $1  ($2)"
+            else
+              echo "::error::missing $1 in the image ($2)"
+              exit 1
+            fi
+          }
+          check /etc/systemd/network/10-eth0.link  "interface pinned to eth0"
+          check /var/lib/alsa/asound.state         "initial volume"
+          check /etc/localtime                     "time zone Asia/Shanghai"
+          check /etc/motd                          "login banner"
+          check /usr/local/bin/zybo-audio-web      "backend built from sources"
+          check /var/www/zybo-audio/index.html     "panel staged from webui/"
+          echo "image defaults present"
+
+      - name: Upload rootfs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian-rootfs
+          path: |
+            rootfs.tar.zst
+            rootfs.ext4
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rootfs-build-log
+          path: mmdebstrap.log
+          if-no-files-found: ignore
+          retention-days: 7

@@ -65,8 +65,8 @@ jobs:
               ./configure --prefix=/usr
               # Static analysis build (no board resources needed): -fanalyzer
               # reports uninit reads / NULL derefs at compile time.
-              make -j"$(nproc)" CFLAGS="-g -O1 -fanalyzer -Wno-analyzer-malloc-leak" >analyzer.log 2>&1 || true
-              grep -E "warning:" analyzer.log | sort | uniq -c | sort -rn | head -30 | tee analyzer-warnings.txt || true
+              make -j"$(nproc)" CFLAGS="-g -O1 -fanalyzer -Wno-analyzer-malloc-leak" >/out/analyzer.log 2>&1 || true
+              grep -E "warning:" /out/analyzer.log | sort | uniq -c | sort -rn | head -40 | tee /out/analyzer-warnings.txt || true
               echo "--- analyzer warnings above (if any) ---"
               if [ "${ASAN}" = "true" ]; then
                 make -j"$(nproc)" CFLAGS="-g -O1 -fsanitize=address" LDFLAGS="-fsanitize=address"
@@ -89,9 +89,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gmediarender-armhf${{ inputs.asan == 'true' && '-asan' || '' }}
-          path: |
-            out/
-            analyzer.log
-            analyzer-warnings.txt
+          path: out/
           if-no-files-found: error
           retention-days: 14

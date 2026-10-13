@@ -1026,14 +1026,18 @@ async function refresh(){
 }
 
 /* ── Now playing / source / volume / bypass ── */
-const SRCS = [['idle', '🛑 Stop'], ['airplay', '📱 AirPlay'], ['dlna', '🏠 DLNA'], ['bluetooth', '🎧 Bluetooth']];
+const SRCS = [['idle', '🛑 Stop'], ['airplay', '📱 AirPlay'], ['dlna', '🏠 DLNA']];
 let curSrc = '';
+let curDlna = '';
+let curSources = {};
 function renderSrcs(){
   const box = $('srcs'); box.innerHTML = '';
   for(const [v, label] of SRCS){
     const b = document.createElement('button');
-    b.dataset.src = v; b.textContent = label;
+    b.dataset.src = v;
+    b.textContent = (v === 'dlna' && curDlna) ? label + ' · ' + curDlna : label;
     if(v === curSrc) b.className = 'on';
+    if(curSources[v] === false) b.disabled = true;
     box.appendChild(b);
   }
 }
@@ -1045,6 +1049,9 @@ async function tick(){
   $('npSub').textContent = st.artist || (st.source ? (st.album || '') : 'Cast to ZYBO Audio from your phone');
   $('npSrc').textContent = st.source || 'Idle';
   if(st.source !== curSrc){ curSrc = st.source || ''; renderSrcs(); }
+  if((st.dlna_iface || '') !== curDlna){ curDlna = st.dlna_iface || ''; renderSrcs(); }
+  const srcs = st.sources || {};
+  if(JSON.stringify(srcs) !== JSON.stringify(curSources)){ curSources = srcs; renderSrcs(); }
   if(document.activeElement !== $('vol')) $('vol').value = st.volume;
   $('volTxt').textContent = st.volume + '%';
   const byp = !!(st.dsp && st.dsp.bypass);

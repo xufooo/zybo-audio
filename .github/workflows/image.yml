@@ -1,0 +1,115 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# image — assemble the bootable SD card image from the five layer artifacts.
+#
+# Pure assembly, zero compilation: takes the pinned outputs of the layer
+# workflows (hardware bitstream, kernel uImage, rootfs, boot stage, software
+# already inside rootfs) and packs BOOT.BIN + partitions + .img.
+#
+# Pure cloud: bootgen builds from open source (Xilinx/bootgen, Apache-2.0)
+# pinned below, so no Vivado / self-hosted runner is needed anywhere.
+# Manual trigger only; inputs pin the exact layer runs to assemble.
+name: image
+on:
+  workflow_dispatch:
+    inputs:
+      hw_run:
+        description: "zybo-dsp bitstream Release tag (e.g. v0.4.0)"
+        required: true
+        default: "v0.4.0"
+      kernel_run:
+        description: "kernel workflow run ID (uImage artifact)"
+        required: true
+        default: ""
+      rootfs_run:
+        description: "rootfs workflow run ID (debian-rootfs artifact)"
+        required: true
+        default: ""
+      boot_run:
+        description: "boot workflow run ID (boot-stage artifact)"
+        required: true
+        default: ""
+
+jobs:
+  assemble:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch layer artifacts
+        run: |
+          set -euo pipefail
+          rm -rf layers && mkdir -p layers/{hw,kernel,rootfs,boot}
+          # hardware: bitstream by Release tag (hash-checked against pins.env)
+          # shellcheck disable=SC1091
+          source <(grep -E '^(ZYBO_DSP_TAG|BITSTREAM_SHA256)=' pins.env)
+          gh release download "$HW_RUN" --repo xufooo/zybo-dsp \
+            --pattern 'system.bit' --dir layers/hw
+          echo "$BITSTREAM_SHA256  layers/hw/system.bit" | sha256sum -c -
+        env:
+          HW_RUN: ${{ inputs.hw_run }}
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Fetch CI artifacts
+        run: |
+          set -euo pipefail
+          gh run download "${{ inputs.kernel_run }}" --repo "$GITHUB_REPOSITORY" \
+            -n "uImage-*" --dir layers/kernel
+          gh run download "${{ inputs.rootfs_run }}" --repo "$GITHUB_REPOSITORY" \
+            -n debian-rootfs --dir layers/rootfs
+          gh run download "${{ inputs.boot_run }}" --repo "$GITHUB_REPOSITORY" \
+            -n boot-stage --dir layers/boot
+          ls -la layers/*/
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Build bootgen from source
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC1091
+          source <(grep -E '^BOOTGEN_(TAG|REPO)=' pins.env)
+          sudo apt-get update
+          sudo apt-get install -y g++ bison flex libssl-dev
+          git clone --depth 1 --branch "$BOOTGEN_TAG" "$BOOTGEN_REPO" bootgen-src
+          make -C bootgen-src -j"$(nproc)"
+          ./bootgen-src/build/bin/bootgen 2>&1 | head -3 || true
+
+      - name: Pack BOOT.BIN (open-source bootgen)
+        run: |
+          set -euo pipefail
+          cp layers/boot/fsbl.elf layers/boot/u-boot.elf .
+          cp layers/hw/system.bit .
+          cat > boot_image.bif <<'BIF'
+          //arch = zynq; split = false; format = BIN
+          the_ROM_image:
+          {
+              [bootloader]fsbl.elf
+              system.bit
+              u-boot.elf
+          }
+          BIF
+          ../bootgen-src/build/bin/bootgen -image boot_image.bif -o BOOT.BIN
+          ls -la BOOT.BIN
+
+      - name: Assemble SD image
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y parted dosfstools mtools
+          mkdir -p bootfiles
+          cp BOOT.BIN layers/kernel/uImage layers/kernel/zybo-audio.dtb \
+            layers/boot/boot.scr bootfiles/
+          bash tools/make_sdcard.sh --boot bootfiles \
+            --rootfs layers/rootfs/rootfs.ext4 --out sdcard.img
+          ls -la sdcard.img
+          sha256sum sdcard.img | tee image-SHA256SUMS
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdcard-image
+          path: |
+            sdcard.img
+            image-SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14

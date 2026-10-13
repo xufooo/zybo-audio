@@ -77,6 +77,7 @@ func getMemUsedMB() int {
 }
 
 func buildStatus() APIStatus {
+	srcMgr.healDlnaBinding()
 	return APIStatus{
 		Version: appVersion,
 		Source:  currentSource,
@@ -86,11 +87,12 @@ func buildStatus() APIStatus {
 
 		Playing: systemIsPlaying(),
 
-		Volume:   readSystemVolume(currentVolume),
-		VolumeDB: systemVolumeDB(currentVolume),
-		DSP:      dspStatusSnapshot(),
-		System:   getSystemStatus(),
-		Sources:  sourceStates(),
+		Volume:    readSystemVolume(currentVolume),
+		VolumeDB:  systemVolumeDB(currentVolume),
+		DSP:       dspStatusSnapshot(),
+		System:    getSystemStatus(),
+		Sources:   sourceStates(),
+		DlnaIface: srcMgr.dlnaIfaceLabel(),
 	}
 }
 

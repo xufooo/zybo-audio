@@ -55,7 +55,8 @@ type APIStatus struct {
 	DSP      DSPStatus    `json:"dsp"`
 	System   SystemStatus `json:"system"`
 
-	Sources map[string]bool `json:"sources"`
+	Sources   map[string]bool `json:"sources"`
+	DlnaIface string          `json:"dlna_iface"`
 }
 
 var (
@@ -317,16 +318,16 @@ func handleSourceSelect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	srcMgr.stopAll()
+	if body.Source != "dlna" {
+		srcMgr.stopAll()
+	}
 
 	var err error
 	switch body.Source {
 	case "airplay":
 		err = srcMgr.startAirPlay()
 	case "dlna":
-		err = srcMgr.startDLNA()
-	case "bluetooth":
-		err = srcMgr.startBluetooth()
+		_, err = srcMgr.selectDLNA()
 	case "idle":
 
 	default:

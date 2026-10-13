@@ -139,6 +139,10 @@ if [ "${ZYBO_ROOT_PW:-}" = "" ]; then
 fi
 
 rm -f "$TARGET"/etc/ssh/ssh_host_*
+# machine-id must be unique per board: empty it so systemd generates a fresh
+# one on first boot (a baked-in ID would clone across every flashed card).
+: > "$TARGET"/etc/machine-id
+rm -f "$TARGET"/var/lib/dbus/machine-id
 install -d "$TARGET/etc/systemd/system/ssh.service.d"
 cat > "$TARGET/etc/systemd/system/ssh.service.d/10-generate-host-keys.conf" <<'EOF'
 

@@ -1,0 +1,73 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# boot — build the bootloader stage (u-boot.elf + boot.scr) from pinned inputs.
+#
+# U-Boot builds from source in the cloud (upstream tag + generic Zynq-7000
+# config xilinx_zynq_virt + DEVICE_TREE=zynq-zybo, same as the archived
+# zybo-buildroot recipe). FSBL cannot be built in the cloud (needs Vivado +
+# board XSA), so the exact binary is vendored at boot/fsbl.elf and verified
+# against pins.env FSBL_SHA256 on every run.
+#
+# Manual trigger only. Output feeds the image workflow (boot layer).
+name: boot
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read pins
+        run: |
+          set -euo pipefail
+          grep -E '^(UBOOT_VERSION|UBOOT_REPO|FSBL_SHA256)=' pins.env | tee /tmp/bpins
+          git rev-parse HEAD | tee /tmp/inputs-sha
+
+      - name: Verify vendored FSBL
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC1091
+          source /tmp/bpins
+          echo "$FSBL_SHA256  boot/fsbl.elf" | sha256sum -c -
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-linux-gnueabihf bc flex bison \
+            libssl-dev u-boot-tools
+
+      - name: Build U-Boot from source
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC1091
+          source /tmp/bpins
+          git clone --depth 1 --branch "$UBOOT_VERSION" "$UBOOT_REPO" u-boot
+          cd u-boot
+          export CROSS_COMPILE=arm-linux-gnueabihf-
+          make xilinx_zynq_virt_defconfig
+          make -j"$(nproc)" DEVICE_TREE=zynq-zybo u-boot.elf
+          ls -la u-boot.elf
+
+      - name: Pack boot.scr + manifest
+        run: |
+          set -euo pipefail
+          rm -rf out && mkdir out
+          cp u-boot/u-boot.elf out/
+          mkimage -A arm -T script -C none -d boot/boot.cmd out/boot.scr
+          cp boot/fsbl.elf out/
+          {
+            echo "uboot: $UBOOT_REPO @ $UBOOT_VERSION (xilinx_zynq_virt + DEVICE_TREE=zynq-zybo)"
+            echo "fsbl: boot/fsbl.elf ($FSBL_SHA256)"
+            echo "inputs-sha: $(cat /tmp/inputs-sha)"
+          } | tee out/build-info.txt
+          (cd out && sha256sum u-boot.elf boot.scr fsbl.elf | tee SHA256SUMS)
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: boot-stage
+          path: out/
+          if-no-files-found: error
+          retention-days: 14

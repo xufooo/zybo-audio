@@ -170,8 +170,9 @@ CONFIG_ATH9K_HW=y
 CONFIG_ATH9K_COMMON=y
 CONFIG_ATH9K_HTC=y
 
-# --- Network filesystems (f4: NAS 直挂，跳过 DLNA 转码) -------------------------
-# CIFS/SMB2 内编（=y，随内核走，不折腾模块安装）；NFSv3/v4 客户端同理。
+# --- Network filesystems (f4: direct NAS mounts, bypassing DLNA transcode) -----
+# CIFS/SMB2 built in (=y, travels with the kernel, no module install fuss);
+# same for the NFSv3/v4 clients.
 CONFIG_CIFS=y
 CONFIG_CIFS_SMB2=y
 CONFIG_CIFS_DFS_UPCALL=n

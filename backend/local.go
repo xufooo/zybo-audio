@@ -276,29 +276,46 @@ func handleLocalUpdate(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]int{"updating": n})
 }
 
-func handleNasConfig(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{"configured": nasConfigured(), "base": cdsBase})
+func handleNasServers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "GET only", http.StatusMethodNotAllowed)
 		return
-	case http.MethodPost:
-	default:
-		http.Error(w, "GET/POST only", http.StatusMethodNotAllowed)
+	}
+	servers, err := discoverServers()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	if servers == nil {
+		servers = []cdsServer{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(servers)
+}
+
+func handleNasUse(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST only", http.StatusMethodNotAllowed)
 		return
 	}
 	var body struct {
-		Base string
+		Location string
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	u, err := url.Parse(body.Base)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		http.Error(w, "bad base", http.StatusBadRequest)
+	if body.Location == "" {
+		http.Error(w, "bad location", http.StatusBadRequest)
 		return
 	}
-	cdsBase = body.Base
+	s, err := describeServer(body.Location)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	cdsServers = []cdsServer{s}
+	cdsCurrent = 0
+	rememberServer()
 	w.WriteHeader(http.StatusOK)
 }

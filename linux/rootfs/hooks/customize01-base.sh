@@ -164,14 +164,21 @@ user                "mpd"
 bind_to_address     "any"
 port                "6600"
 
-mixer_type          "none"
+# Mounted libraries enter via symlinks (/var/lib/mpd/music/nas -> /mnt/nas),
+# so MPD must follow them out.
+follow_outside_symlinks "yes"
+
+# One system volume, two stages (0.6 rule):
+# the codec ALSA "Master" is the board control (panel/backend),
+# the MPD "software" mixer is the phone/source control (OpenHome Volume).
+mixer_type          "software"
 volume_normalization "no"
 
 audio_output {
     type        "alsa"
     name        "ZYBO (SSM2603 @48k)"
     device      "default"
-    mixer_type  "none"
+    mixer_type  "software"
 }
 EOF
 chroot "$TARGET" install -d -o mpd -g audio /var/lib/mpd/music /var/lib/mpd/playlists
@@ -184,8 +191,10 @@ for u in ssh.service \
          systemd-timesyncd.service \
          avahi-daemon.service \
          shairport-sync.service \
-         bluetooth.service \
-         mpd.socket; do
+         bluetooth.service; do
+    # NOTE: mpd.socket deliberately NOT enabled (0.6): socket activation races
+    # mpd.service for port 6600 (IPv4 bind fails) and wakes MPD on any stray
+    # connection. The backend owns the MPD lifecycle (start/stop with sources).
     if [ -e "$TARGET/usr/lib/systemd/system/$u" ]; then
         ln -sf "/usr/lib/systemd/system/$u" "$WANT/$u"
         echo "[hook] enabled $u"

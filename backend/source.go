@@ -2,54 +2,57 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"os/exec"
 	"sort"
 	"strings"
 	"sync"
+	"time"
 )
 
 type sourceManager struct {
 	mu     sync.Mutex
 	active string
-	procs  map[string]*exec.Cmd
-
-	dlnaIface string
 }
 
 var sourceUnits = map[string][]string{
 	"airplay": {"shairport-sync.service"},
+
+	"dlna": {"mpd.service", "upmpdcli.service"},
+
+	"local": {"mpd.service"},
 }
 
-var sourceCommands = map[string]string{
-	"dlna": "gmediarender",
+func needsIface(name string) bool {
+	return name == "airplay" || name == "dlna"
 }
 
 func (sm *sourceManager) init() error {
-	sm.procs = make(map[string]*exec.Cmd)
 	sm.active = "idle"
 
 	for name := range sourceUnits {
 		if !sourceAvailable(name) {
-			log.Printf("Source '%s': unavailable (unit or program missing)", name)
+			log.Printf("Source '%s': unavailable (unit missing)", name)
 			continue
 		}
 		log.Printf("Source '%s': available", name)
-	}
-	for name, cmd := range sourceCommands {
-		if _, err := exec.LookPath(cmd); err != nil {
-			log.Printf("Source '%s': %s not in PATH, unavailable", name, cmd)
-		} else {
-			log.Printf("Source '%s': %s available", name, cmd)
-		}
 	}
 
 	if unitActive("shairport-sync.service") {
 		sm.active = "airplay"
 		log.Printf("Detected AirPlay already running (shairport-sync.service)")
+	}
+	if unitActive("upmpdcli.service") {
+		sm.active = "dlna"
+		log.Printf("Detected DLNA already running (upmpdcli.service)")
+	}
+	if unitActive("mpd.service") && sm.active == "idle" {
+
+		sm.active = "local"
+		log.Printf("Detected local playback already running (mpd.service)")
 	}
 	return nil
 }
@@ -66,17 +69,7 @@ func sourceAvailable(name string) bool {
 		if !found {
 			return false
 		}
-		if name == "airplay" {
-			return len(usableIfaces()) > 0
-		}
-		return true
-	}
-	if cmd, ok := sourceCommands[name]; ok {
-		if _, err := exec.LookPath(cmd); err != nil {
-			return false
-		}
-
-		if name == "dlna" {
+		if needsIface(name) {
 			return len(usableIfaces()) > 0
 		}
 		return true
@@ -84,8 +77,20 @@ func sourceAvailable(name string) bool {
 	return false
 }
 
+var sourceStopExtra = map[string][]string{
+	"local": {"mpd.socket"},
+	"dlna":  {"mpd.socket"},
+}
+
+func unitsToStop(name string) []string {
+	out := append([]string(nil), sourceUnits[name]...)
+	return append(out, sourceStopExtra[name]...)
+}
+
 func systemctl(args ...string) (string, error) {
-	out, err := exec.Command("systemctl", args...).CombinedOutput()
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "systemctl", args...).CombinedOutput()
 	return strings.TrimSpace(string(out)), err
 }
 
@@ -100,6 +105,8 @@ func unitActive(unit string) bool {
 }
 
 func (sm *sourceManager) startAirPlay() error { return sm.startUnitSource("airplay") }
+
+func (sm *sourceManager) startLocal() error { return sm.startUnitSource("local") }
 
 func (sm *sourceManager) startUnitSource(name string) error {
 	units := sourceUnits[name]
@@ -117,6 +124,12 @@ func (sm *sourceManager) startUnitSource(name string) error {
 	for _, u := range units {
 		if out, err := systemctl("start", u); err != nil {
 			return fmt.Errorf("systemctl start %s: %v (%s)", u, err, out)
+		}
+	}
+
+	if name == "local" || name == "dlna" {
+		if err := quietMPD(); err != nil {
+			log.Printf("quietMPD: %v (continuing, source switch must not fail)", err)
 		}
 	}
 	sm.active = name
@@ -164,125 +177,18 @@ func usableIfaces() []string {
 	return names
 }
 
-func defaultIface(names []string) string {
-	for _, n := range names {
-		if strings.HasPrefix(n, "wl") {
-			return n
-		}
-	}
-	if len(names) > 0 {
-		return names[0]
-	}
-	return ""
-}
-
-func wifiIface() string {
-	return defaultIface(usableIfaces())
-}
-
-func nextIface(names []string, cur string) string {
-	if len(names) == 0 {
-		return ""
-	}
-	at := -1
-	for i, n := range names {
-		if n == cur {
-			at = i
-			break
-		}
-	}
-	return names[(at+1)%len(names)]
-}
-
 func (sm *sourceManager) selectDLNA() (string, error) {
-	sm.mu.Lock()
-	defer sm.mu.Unlock()
-	names := usableIfaces()
-	iface := ""
-	if sm.active != "dlna" {
-		iface = defaultIface(names)
-	} else if len(names) > 1 {
-		iface = nextIface(names, sm.dlnaIface)
-	} else if len(names) == 1 {
-		iface = names[0]
-	}
-	if sm.active == "dlna" && iface == sm.dlnaIface {
-		return iface, nil
-	}
-	if err := sm.spawnDLNA_locked(iface); err != nil {
+	if err := sm.startUnitSource("dlna"); err != nil {
 		return "", err
 	}
-	sm.dlnaIface = iface
-	sm.active = "dlna"
-	return iface, nil
+	return "", nil
 }
 
 func (sm *sourceManager) healDlnaBinding() {
-	sm.mu.Lock()
-	defer sm.mu.Unlock()
-	if sm.active != "dlna" {
-		return
-	}
-	names := usableIfaces()
-	for _, n := range names {
-		if n == sm.dlnaIface {
-			return
-		}
-	}
-	if len(names) == 0 {
-		sm.stopAllLocked()
-		sm.dlnaIface = ""
-		log.Printf("DLNA: bound interface %q gone with no usable NIC, back to idle", sm.dlnaIface)
-		return
-	}
-	next := nextIface(names, sm.dlnaIface)
-	if err := sm.spawnDLNA_locked(next); err != nil {
-		log.Printf("DLNA: move to %s failed: %v", next, err)
-		return
-	}
-	log.Printf("DLNA: interface %q gone, moved to %s", sm.dlnaIface, next)
-	sm.dlnaIface = next
 }
 
 func (sm *sourceManager) dlnaIfaceLabel() string {
-	sm.mu.Lock()
-	defer sm.mu.Unlock()
-	if sm.active != "dlna" {
-		return ""
-	}
-	return sm.dlnaIface
-}
-
-func (sm *sourceManager) spawnDLNA_locked(iface string) error {
-	cmdName := sourceCommands["dlna"]
-	if _, err := exec.LookPath(cmdName); err != nil {
-		return fmt.Errorf("%s not in PATH (this image has no DLNA renderer installed)", cmdName)
-	}
-	sm.stopAllLocked()
-
-	args := []string{
-		"-f", "ZYBO Audio",
-		"-p", "49494",
-		"-u", "00000000-0000-0000-0000-000000000001",
-	}
-	if iface != "" {
-		args = append(args, "-I", iface)
-	}
-	cmd := exec.Command(cmdName, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("%s: %w", cmdName, err)
-	}
-
-	go func() {
-		if err := cmd.Wait(); err != nil {
-			log.Printf("%s exited: %v", cmdName, err)
-		}
-	}()
-	sm.procs["dlna"] = cmd
-	log.Printf("Source started: dlna (%s, pid %d, iface %s)", cmdName, cmd.Process.Pid, iface)
-	return nil
+	return ""
 }
 
 func (sm *sourceManager) stopAll() {
@@ -292,25 +198,23 @@ func (sm *sourceManager) stopAll() {
 }
 
 func (sm *sourceManager) stopAllLocked() {
-	for name, units := range sourceUnits {
+
+	if sm.active == "local" || sm.active == "dlna" {
+		if err := quietMPD(); err != nil {
+			log.Printf("quietMPD on stop: %v (continuing)", err)
+		}
+	}
+	for name := range sourceUnits {
 		if !sourceAvailable(name) {
 			continue
 		}
-		for _, u := range units {
+		for _, u := range unitsToStop(name) {
 			if _, err := systemctl("stop", u); err != nil {
 				log.Printf("systemctl stop %s: %v", u, err)
 			}
 		}
 	}
 
-	for name, cmd := range sm.procs {
-		if cmd != nil && cmd.Process != nil {
-			log.Printf("Stopping source: %s (pid %d)", name, cmd.Process.Pid)
-			cmd.Process.Signal(os.Interrupt)
-			cmd.Process.Kill()
-		}
-		delete(sm.procs, name)
-	}
 	sm.active = "idle"
 }
 
@@ -318,5 +222,6 @@ func sourceStates() map[string]bool {
 	return map[string]bool{
 		"airplay": sourceAvailable("airplay"),
 		"dlna":    sourceAvailable("dlna"),
+		"local":   sourceAvailable("local"),
 	}
 }

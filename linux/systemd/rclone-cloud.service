@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# rclone-cloud.service - cloud drive mount (B4b rclone)
+# Remote must be named cloud (stated in the panel paste UI). Refuses cleanly without config.
+# Read-only mount (--umask/dir/file perms), no VFS cache on 512MB RAM.
+[Unit]
+Description=rclone cloud mount (/mnt/cloud)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/rclone mount cloud: /mnt/cloud --config /etc/rclone/rclone.conf --vfs-cache-mode off --allow-other --umask 022 --dir-perms 0555 --file-perms 0444 --daemon-timeout 30s
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

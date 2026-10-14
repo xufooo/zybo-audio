@@ -14,7 +14,7 @@ var (
 	srcMgr *sourceManager
 )
 
-const appVersion = "0.5.0"
+const appVersion = "0.6.0"
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
@@ -76,6 +76,19 @@ func main() {
 	mux.HandleFunc("/api/dsp/export", handleEQExport)
 	mux.HandleFunc("/api/volume", handleVolume)
 	mux.HandleFunc("/api/source/select", handleSourceSelect)
+	mux.HandleFunc("/api/local/list", handleLocalList)
+	mux.HandleFunc("/api/local/play", handleLocalPlay)
+	mux.HandleFunc("/api/nas/list", handleNasList)
+	mux.HandleFunc("/api/nas/play", handleNasPlay)
+	mux.HandleFunc("/api/nas/config", handleNasConfig)
+	mux.HandleFunc("/api/cloud/config", handleCloudConfig)
+	mux.HandleFunc("/api/cloud/mount", handleCloudMount)
+	mux.HandleFunc("/api/local/queue", handleLocalQueue)
+	mux.HandleFunc("/api/local/ctl", handleLocalCtl)
+	mux.HandleFunc("/api/local/enqueue", handleLocalEnqueue)
+	mux.HandleFunc("/api/local/update", handleLocalUpdate)
+	mux.HandleFunc("/api/local/enqueue-dir", handleLocalEnqueueDir)
+	mux.HandleFunc("/api/nas/enqueue", handleNasEnqueue)
 	mux.HandleFunc("/api/reboot", handleReboot)
 	mux.HandleFunc("/api/shutdown", handleShutdown)
 

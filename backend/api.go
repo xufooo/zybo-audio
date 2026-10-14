@@ -318,6 +318,8 @@ func handleSourceSelect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Source switching: each source's own start path stops the others first
+	// (startUnitSource calls stopAllLocked); stop here only when switching away.
 	if body.Source != "dlna" {
 		srcMgr.stopAll()
 	}
@@ -326,6 +328,8 @@ func handleSourceSelect(w http.ResponseWriter, r *http.Request) {
 	switch body.Source {
 	case "airplay":
 		err = srcMgr.startAirPlay()
+	case "local":
+		err = srcMgr.startLocal()
 	case "dlna":
 		_, err = srcMgr.selectDLNA()
 	case "idle":
@@ -463,6 +467,14 @@ func collectMetadata() {
 	case "dlna":
 
 		clearMetadata()
+	case "local":
+
+		song, err := mpdCurrentSong()
+		if err != nil || song.File == "" {
+			clearMetadata()
+			return
+		}
+		currentTitle, currentArtist, currentAlbum = song.Title, song.Artist, song.Album
 	}
 }
 

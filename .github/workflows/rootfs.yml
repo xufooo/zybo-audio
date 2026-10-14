@@ -27,7 +27,7 @@ concurrency:
 
 env:
   # Keep in sync with pins.env DEBIAN_SUITE/DEBIAN_COMPONENTS.
-  BASE_PACKAGES: "systemd,systemd-sysv,systemd-timesyncd,alsa-utils,libasound2-plugins,sox,mpd,mpc,shairport-sync,avahi-daemon,avahi-utils,bluez,bluez-alsa-utils,libasound2-plugin-bluez,i2c-tools,iproute2,iputils-ping,openssh-server,sudo,curl,ca-certificates,locales,tzdata,nano,rsync,mpg123,usbutils,python3,wpasupplicant,iw,rfkill,wireless-regdb,firmware-realtek,firmware-mediatek,firmware-atheros,firmware-misc-nonfree"
+  BASE_PACKAGES: "systemd,systemd-sysv,systemd-timesyncd,alsa-utils,libasound2-plugins,sox,mpd,mpc,shairport-sync,avahi-daemon,avahi-utils,bluez,bluez-alsa-utils,libasound2-plugin-bluez,i2c-tools,iproute2,iputils-ping,openssh-server,sudo,curl,ca-certificates,locales,tzdata,nano,rsync,mpg123,usbutils,python3,wpasupplicant,iw,rfkill,wireless-regdb,firmware-realtek,firmware-mediatek,firmware-atheros,firmware-misc-nonfree,cifs-utils,fuse3,rclone"
 
 jobs:
   build:
@@ -83,6 +83,9 @@ jobs:
         run: |
           install -Dm644 webui/index.html                 files/webui/index.html
           install -Dm644 linux/systemd/zybo-audio-web.service files/zybo-audio-web.service
+          install -Dm644 linux/systemd/mnt-nas.mount         files/systemd/mnt-nas.mount
+          install -Dm644 linux/systemd/mnt-nas.automount     files/systemd/mnt-nas.automount
+          install -Dm644 linux/systemd/rclone-cloud.service  files/systemd/rclone-cloud.service
           install -Dm644 VERSION THIRD-PARTY.md           files/
           ( cd files && sha256sum zybo-audio-web zybo-audio-web.service VERSION \
                 THIRD-PARTY.md webui/index.html > SHA256SUMS )

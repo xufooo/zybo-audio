@@ -30,10 +30,18 @@ func stubCDS(t *testing.T) string {
 	return srv.URL
 }
 
+// useStubCDS points the current selection at a stub (control URL given
+// directly) and restores afterwards.
+func useStubCDS(t *testing.T, control string) {
+	t.Helper()
+	savedServers, savedCurrent := cdsServers, cdsCurrent
+	cdsServers = []cdsServer{{Name: "stub", Control: control}}
+	cdsCurrent = 0
+	t.Cleanup(func() { cdsServers, cdsCurrent = savedServers, savedCurrent })
+}
+
 func TestCDSBrowseParsesContainersAndTracks(t *testing.T) {
-	saved := cdsBase
-	cdsBase = stubCDS(t)
-	t.Cleanup(func() { cdsBase = saved })
+	useStubCDS(t, stubCDS(t)+"/ctl")
 	res, err := cdsBrowse("26")
 	if err != nil {
 		t.Fatalf("browse must succeed, err: %v", err)
@@ -50,9 +58,7 @@ func TestCDSBrowseParsesContainersAndTracks(t *testing.T) {
 }
 
 func TestCDSBrowseFailsCleanly(t *testing.T) {
-	saved := cdsBase
-	cdsBase = "http://127.0.0.1:1"
-	t.Cleanup(func() { cdsBase = saved })
+	useStubCDS(t, "http://127.0.0.1:1/nope")
 	if _, err := cdsBrowse("0"); err == nil {
 		t.Fatalf("must error when unreachable")
 	}

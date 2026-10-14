@@ -209,6 +209,7 @@ a{color:var(--acc)}
   </div>
   <div id="nasBox" hidden>
     <div class="dim" id="nasPath"></div>
+    <div><button class="linkbtn" id="nasSrv">🔍 Scan servers</button></div>
     <div id="nasList" class="liblist"></div>
   </div>
   <div id="cloudBox" hidden>
@@ -1223,6 +1224,29 @@ async function enqueueUrl(u){
   }catch(err){ say('Cannot queue: ' + err.message, 'e'); }
   tick();
 }
+/* ── Server discovery: scan only, tap a name to use it ── */
+let nasServerName = '';
+async function loadServers(){
+  const box = $('nasList');
+  $('nasPath').textContent = '';
+  box.innerHTML = '';
+  let servers;
+  try{ servers = await (await fetch('/api/nas/servers')).json(); }
+  catch(e){ box.textContent = 'Cannot read library'; return; }
+  if(!servers.length){ box.textContent = '(empty)'; return; }
+  for(const s of servers){
+    const b = document.createElement('button');
+    b.textContent = '🖥 ' + s.name;
+    b.onclick = async () => {
+      try{ await post('/api/nas/use', {location: s.location}); }
+      catch(err){ say('Cannot select: ' + err.message, 'e'); return; }
+      nasServerName = s.name; curNasId = '0'; nasStack = []; loadedNasId = null;
+      $('nasSrv').textContent = '🖥 ' + s.name;
+      loadNas(true);
+    };
+    box.appendChild(b);
+  }
+}
 /* ── NAS library: navigate by id (CDS ids are not paths), tracks play by URL ── */
 let curNasId = '0', loadedNasId = null, nasStack = [];
 async function playUrl(u){
@@ -1240,7 +1264,12 @@ async function loadNas(force){
   const box = $('nasList');
   let res;
   try{ res = await (await fetch('/api/nas/list?id=' + encodeURIComponent(curNasId))).json(); }
-  catch(e){ box.textContent = 'Cannot read library'; return; }
+  catch(e){
+    // No server selected yet (502 etc.): fall through to the server list.
+    if(!nasServerName){ loadServers(); return; }
+    box.textContent = 'Cannot read library'; return;
+  }
+  if(res === null || res.Containers === undefined){ loadServers(); return; }
   $('nasPath').textContent = (res.Tracks || []).length + ' tracks';
   $('libPath').textContent = 'NAS · ' + (res.Tracks || []).length + ' tracks';
   box.innerHTML = '';
@@ -1293,6 +1322,7 @@ $('tport').addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if(!b) return;
   ctl(b.dataset.act);
 });
+$('nasSrv').addEventListener('click', () => { loadedNasId = null; loadServers(); });
 $('playAll').addEventListener('click', async () => {
   try{
     await post('/api/source/select', {source: 'local'});

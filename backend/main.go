@@ -36,6 +36,10 @@ func main() {
 	if err := srcMgr.init(); err != nil {
 		log.Printf("Source manager init: %v", err)
 	}
+	// SSDP background listener (NAS servers page; silent servers only NOTIFY).
+	go ssdpListen()
+	// Recall the remembered library (board-local file, never in repo).
+	recallServer()
 
 	currentSource = srcMgr.active
 
@@ -80,7 +84,8 @@ func main() {
 	mux.HandleFunc("/api/local/play", handleLocalPlay)
 	mux.HandleFunc("/api/nas/list", handleNasList)
 	mux.HandleFunc("/api/nas/play", handleNasPlay)
-	mux.HandleFunc("/api/nas/config", handleNasConfig)
+	mux.HandleFunc("/api/nas/servers", handleNasServers)
+	mux.HandleFunc("/api/nas/use", handleNasUse)
 	mux.HandleFunc("/api/cloud/config", handleCloudConfig)
 	mux.HandleFunc("/api/cloud/mount", handleCloudMount)
 	mux.HandleFunc("/api/local/queue", handleLocalQueue)

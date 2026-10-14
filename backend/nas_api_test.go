@@ -10,9 +10,7 @@ import (
 )
 
 func TestNasListHandler(t *testing.T) {
-	saved := cdsBase
-	cdsBase = stubCDS(t)
-	t.Cleanup(func() { cdsBase = saved })
+	useStubCDS(t, stubCDS(t)+"/ctl")
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/nas/list?id=26", nil)
 	handleNasList(rec, req)
@@ -34,9 +32,7 @@ func TestNasPlayHandler(t *testing.T) {
 		"add":   "OK\n",
 		"play":  "OK\n",
 	})
-	saved := cdsBase
-	cdsBase = "http://198.51.100.200:50001"
-	t.Cleanup(func() { cdsBase = saved })
+	useStubCDS(t, "http://198.51.100.200:50001/ctl")
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/nas/play",
 		strings.NewReader(`{"url":"http://198.51.100.200:50002/x.wav"}`))

@@ -37,9 +37,7 @@ func TestEnqueueContainerRecursive(t *testing.T) {
 		"add":    "OK\n",
 		"play":   "OK\n",
 	})
-	saved := cdsBase
-	cdsBase = stubCDSLevel(t)
-	t.Cleanup(func() { cdsBase = saved })
+	useStubCDS(t, stubCDSLevel(t)+"/ctl")
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/nas/enqueue", strings.NewReader(`{"id":"1"}`))
 	handleNasEnqueue(rec, req)

@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# mnt-nas.mount - NAS music share (CIFS on-demand mount)
+# Server address and credentials are site-local: replace nas-server below
+# with your NAS address, and write /etc/nas.credentials at first-boot setup
+# (format: username=... plus the secret key documented under CREDENTIALS
+# in mount.cifs(8); the file itself is never imaged).
+#   username=xxx
+#   ...plus the secret key, see CREDENTIALS in mount.cifs(8)
+# Without credentials/guest the mount fails cleanly, never stalls boot (device-timeout 10s).
+[Unit]
+Description=NAS music share (CIFS, on demand)
+After=network-online.target
+Wants=network-online.target
+
+[Mount]
+What=//nas-server/music
+Where=/mnt/nas
+Type=cifs
+Options=credentials=/etc/nas.credentials,ro,vers=3.0,uid=mpd,gid=audio,x-systemd.device-timeout=10
+
+[Install]
+WantedBy=multi-user.target

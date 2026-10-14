@@ -9,6 +9,8 @@ Nothing in this list is vendored here.
 | U-Boot `v2024.01` | DENX, GPL-2.0+ | upstream tag, stock binary |
 | Debian trixie packages | respective owners (see per-package `/usr/share/doc/*/copyright` in the image) | mmdebstrap at build time; image ships non-free firmware blobs (see NOTICE below) |
 | shairport-sync 5.5.2 + nqptp 1.2.8 | Mike Brady et al., MIT (shairport) | cross-built by CI |
+| upmpdcli 1.9.x (DLNA renderer) + libnpupnp/libupnpp | Jean-Francois Dockes, LGPL-2.1+ (libraries) / GPL (daemon parts, see its copyright) | upstream trixie ARM repo at image time (`linux/rootfs/hooks/customize07-upmpdcli.sh`); service left disabled, backend-managed |
+| rclone 1.60.x + cifs-utils + fuse3 (NAS/cloud mounts) | rclone authors (MIT), Samba Team (GPL), FUSE (mixed) | Debian main at image time (`BASE_PACKAGES` in `rootfs.yml`) |
 | Go toolchain + `gorilla/websocket` | Go Authors (BSD-3) / Gorilla (BSD-3) | fetched by `go build` |
 | `zybo-dsp` bitstream inputs | see `zybo-dsp/THIRD-PARTY.md` | consumed as `.bit`/`.xsa` pinned by hash (see `boot/`) |
 | FSBL `md5.c` (inside BOOT.BIN) | Eric Young (SSLeay-style, attribution + advertising clause) | compiled from Vivado embeddedsw; attribution kept in image docs |

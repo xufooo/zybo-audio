@@ -368,7 +368,7 @@ function fixtureFor(url) {
     `Has a status line next to it (${($('masterTxt') || {}).textContent})`);
 
   const btns = qsa('#srcs button');
-  check(btns.length === 3, `3 source steps (${btns.map(b => b.textContent).join(' / ')})`);
+  check(btns.length === 4, `4 source steps (${btns.map(b => b.textContent).join(' / ')})`);
   if (btns.length >= 2) {
     const nSrc0 = reqs('/api/source/select').length;
     click(btns[1]);

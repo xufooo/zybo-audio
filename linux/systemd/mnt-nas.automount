@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# mnt-nas.automount - mount on first access to /mnt/nas, never slows boot.
+[Unit]
+Description=Automount NAS music share
+
+[Automount]
+Where=/mnt/nas
+TimeoutIdleSec=300
+
+[Install]
+WantedBy=multi-user.target
